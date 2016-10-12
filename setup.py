@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup_kwargs = dict(
-    name='nav_requests',
+    name='nav-requests',
     version='1.0.0',
     description='Make Microsoft Dynamics NAV Web Services requests',
     packages=['nav_requests'],
