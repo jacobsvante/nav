@@ -1,0 +1,8 @@
+*.egg-info
+*.pyc
+*.sublime-*
+.cache
+.coverage
+.tox
+build/
+dist/
