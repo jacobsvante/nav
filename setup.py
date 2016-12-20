@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup_kwargs = dict(
     name='nav-requests',
-    version='1.0.1',
+    version='1.1.0',
     description='Make Microsoft Dynamics NAV Web Services requests',
     packages=['nav_requests'],
     include_package_data=True,
@@ -16,6 +16,7 @@ setup_kwargs = dict(
         'lxml',
         'requests',
         'requests-ntlm',
+        'xmltodict',
     ],
     extras_require={
         'test': {
