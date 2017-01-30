@@ -17,6 +17,7 @@ import json
 import lxml.etree
 import requests
 import requests_ntlm
+import xml.sax.saxutils
 import xmltodict
 
 
@@ -107,7 +108,7 @@ def codeunit(
     filter_tmpl = """<int:{0}>{1}</int:{0}>"""
     filters = (
         '\n'.join([
-            filter_tmpl.format(*f)
+            filter_tmpl.format(f[0], xml.sax.saxutils.escape(f[1]))
             for f in [fil.split('=') for fil in filters]
         ])
     )
@@ -170,7 +171,7 @@ def page(
     """
     filters = (
         '\n'.join([
-            filter_tmpl.format(*f)
+            filter_tmpl.format(f[0], xml.sax.saxutils.escape(f[1]))
             for f in [fil.split('=') for fil in filters]
         ])
     )
