@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2 (2017-02-03)
+
+* Allow forcing type to list for specified elements by passing in a list of space separated names to `--xml-force-list`
+
 ## 1.1.1 (2017-01-30)
 
 * Escape passed in filter values

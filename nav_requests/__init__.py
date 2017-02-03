@@ -80,6 +80,7 @@ def meta(
 
 
 @argh.arg('-f', '--filters', nargs='+', type=str)
+@argh.arg('-x', '--xml-force-list', nargs='+', type=str)
 def codeunit(
     endpoint_url: 'Web services endpoint URL',
     function_name: 'Name of the function to run',
@@ -89,6 +90,7 @@ def codeunit(
     filters: 'Apply filters to the page search' = (),
     json_transform: 'Return data as json' = False,
     log_level: 'The log level to use' = 'INFO',
+    xml_force_list: 'Force list for these XML keys. From xmltodict.force_keys.' = (),
 ):
     """Get a Codeunit's results"""
     logger.setLevel(getattr(logging, log_level.upper()))
@@ -131,7 +133,7 @@ def codeunit(
     )
     data = format_xml(resp.text)
     if json_transform:
-        dct = xmltodict.parse(data)
+        dct = xmltodict.parse(data, force_list=xml_force_list or None)
         results = (
             dct['Soap:Envelope']['Soap:Body']
             ['{}_Result'.format(function_name)]
@@ -141,6 +143,7 @@ def codeunit(
 
 
 @argh.arg('-f', '--filters', nargs='+', type=str)
+@argh.arg('-x', '--xml-force-list', nargs='+', type=str)
 def page(
     endpoint_url: 'Web services endpoint URL',
     username: 'Web services username' = None,
@@ -149,6 +152,7 @@ def page(
     filters: 'Apply filters to the page search' = (),
     json_transform: 'Return data as json' = False,
     log_level: 'The log level to use' = 'INFO',
+    xml_force_list: 'Force list for these XML keys. From xmltodict.force_keys.' = (),
 ):
     """Get a Page's results"""
     logger.setLevel(getattr(logging, log_level.upper()))
@@ -193,7 +197,7 @@ def page(
     )
     data = format_xml(resp.text)
     if json_transform:
-        dct = xmltodict.parse(data)
+        dct = xmltodict.parse(data, force_list=xml_force_list or None)
         results = (
             dct['Soap:Envelope']['Soap:Body']['ReadMultiple_Result']
             ['ReadMultiple_Result']
