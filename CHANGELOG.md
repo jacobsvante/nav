@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.0 (2017-08-25)
+
+* Explicitly pass UTF-8-encoding
+
 ## 2.0.0 (2017-02-13)
 
 * Break out cli into own module and generally make more friendly for programmatic interaction with the library.

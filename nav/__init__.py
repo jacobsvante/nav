@@ -118,6 +118,7 @@ def codeunit(
     endpoint_url = _make_endpoint_url(base_url, 'Codeunit', endpoint)
 
     payload_tmpl = """
+<?xml version="1.0" encoding="utf-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:int="urn:microsoft-dynamics-schemas/codeunit/{codeunit}" xmlns:x50="urn:microsoft-dynamics-nav/xmlports/x50033">
     <soapenv:Header/>
     <soapenv:Body>
@@ -132,7 +133,7 @@ def codeunit(
         function_name=function_name,
         filters=filters,
         codeunit=endpoint,
-    )
+    ).strip().encode('utf-8')
     logger.info('request to:{}'.format(endpoint_url))
     logger.info('payload:{}'.format(payload))
     resp = request(
@@ -175,6 +176,7 @@ def page(
     """Get a Page's results"""
     endpoint_url = _make_endpoint_url(base_url, 'Page', endpoint)
     payload_tmpl = """
+        <?xml version="1.0" encoding="utf-8"?>
         <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:sal="urn:microsoft-dynamics-schemas/page/{page_lower}">
           <soapenv:Header/>
           <soapenv:Body>
@@ -198,7 +200,7 @@ def page(
         filters=filters,
         page_lower=endpoint.lower(),
         num_results=num_results,
-    )
+    ).strip().encode('utf-8')
     logger.info('request to:{}'.format(endpoint_url))
     logger.info('payload:{}'.format(payload))
     resp = request(
