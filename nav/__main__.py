@@ -74,7 +74,7 @@ def codeunit(
     results_only: 'If `json_transform` is True, this controls wether to only return the results within the body of the XML envelope.' = False,
     config_section: 'The config section to get settings from.' = 'nav',
 ):
-    """Info about an endpoint"""
+    """Get a Codeunit's results"""
     _set_log_level(log_level)
     c = functools.partial(nav.config.get, config_section)
     username = _get_username(c, username)
@@ -112,7 +112,7 @@ def page(
     results_only: 'If `json_transform` is True, this controls wether to only return the results within the body of the XML envelope.' = False,
     config_section: 'The config section to get settings from.' = 'nav',
 ):
-    """Info about an endpoint"""
+    """Get a Page's results"""
     _set_log_level(log_level)
     c = functools.partial(nav.config.get, config_section)
     username = _get_username(c, username)
