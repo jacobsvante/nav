@@ -97,17 +97,20 @@ def codeunit(
 
 
 @argh.arg('-f', '--filters', nargs='+', type=str)
+@argh.arg('-e', '--entries', nargs='+', type=str)
 @argh.arg('-x', '--xmltodict-force-list', nargs='+', type=str)
 def page(
+    method: 'Method to use',
     endpoint: 'Web services endpoint',
     base_url: 'The base URL for the endpoint.' = None,
     username: 'Web services username' = None,
     password: 'Web services password' = None,
-    filters: 'Apply filters to the page search' = (),
+    filters: 'Filters to apply to a ReadMultiple query' = (),
+    entries: 'Entries to create when method is CreateMultiple' = (),
     json_transform: 'Return data as json' = False,
     interactive: 'Interactive mode' = True,
     num_results: 'Amount of results to return' = 0,
-    xmltodict_force_list: 'Force list for these XML keys. From xmltodict.force_keys.' = (),
+    xmltodict_force_list: 'If `json_transform` is also True then this setting allows forcing specified element tags to always be returned as lists, even if they only contain a single child element (standard behavior is to convert to dict then). Default is to apply this to elements with same name as the specified entrypoint.' = None,
     log_level: 'The log level to use' = 'WARNING',
     results_only: 'If `json_transform` is True, this controls wether to only return the results within the body of the XML envelope.' = False,
     config_section: 'The config section to get settings from.' = 'nav',
@@ -118,11 +121,18 @@ def page(
     username = _get_username(c, username)
     password = _get_password(c, password)
     data = nav.page(
+        method=method,
         endpoint=endpoint,
         base_url=c('base_url', base_url),
         username=username,
         password=password,
         filters=collections.OrderedDict(f.split('=') for f in filters),
+        entries=[
+            collections.OrderedDict(
+                field.split('=') for field in entry.split(':')
+            )
+            for entry in entries
+        ],
         to_python=json_transform,
         num_results=num_results,
         force_list=xmltodict_force_list,
