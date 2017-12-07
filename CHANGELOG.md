@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.0 (2017-12-07)
+
+* Add support for creating page entries with CreateMultiple. Signature for `nav.page` has changed to take `method` as its second argument. Supports ReadMultiple (previous default) and CreateMultiple.
+* Default to always turning elements with the same name as the Page into lists results for ReadMultiple and CreateMultiple page results. Disable this behavior by passing in `force_list=False` to `nav.page`.
+
 ## 2.1.0 (2017-08-25)
 
 * Explicitly pass UTF-8-encoding
