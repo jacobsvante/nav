@@ -10,6 +10,7 @@ import nav
 
 
 def _set_log_level(log_level):
+    logging.basicConfig()
     nav.logger.setLevel(getattr(logging, log_level.upper()))
 
 

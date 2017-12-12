@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.1 (2017-12-12)
+
+* Only call `logging.basicConfig` when run as a CLI utility. Should be set by the user of this package when run programmatically.
+* Log headers for each request
+* Set request info logging to debug level
+
 ## 3.0.0 (2017-12-07)
 
 * Add support for creating page entries with CreateMultiple. Signature for `nav.page` has changed to take `method` as its second argument. Supports ReadMultiple (previous default) and CreateMultiple.

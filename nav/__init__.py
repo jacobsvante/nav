@@ -24,7 +24,6 @@ from ._metadata import __version__, __version_info__  # noqa
 
 NOT_SET = object()
 
-logging.basicConfig()
 logger = logging.getLogger('nav')
 
 
@@ -66,14 +65,18 @@ def request(
         headers=None,
         data=None
 ):
+    headers = dict(
+        **{'content-type': 'text/xml;charset=UTF-8'},
+        **(headers or {})
+    )
+    logger.debug('Request to: {}'.format(url))
+    logger.debug('Headers: {}'.format(headers))
+    logger.debug('Payload: {}'.format(data))
     resp = requests.request(
         method,
         url,
         auth=requests_ntlm.HttpNtlmAuth(username, password),
-        headers=dict(
-            **{'content-type': 'text/xml;charset=UTF-8'},
-            **(headers or {})
-        ),
+        headers=headers,
         data=data,
     )
     try:
@@ -134,8 +137,6 @@ def codeunit(
         filters=filters,
         codeunit=endpoint,
     ).strip().encode('utf-8')
-    logger.info('request to:{}'.format(endpoint_url))
-    logger.info('payload:{}'.format(payload))
     resp = request(
         'POST', endpoint_url, username, password,
         headers={
@@ -265,8 +266,6 @@ def page(
         num_results=num_results,
     ).strip().encode('utf-8')
 
-    logger.info('request to:{}'.format(endpoint_url))
-    logger.info('payload:{}'.format(payload))
     resp = request(
         'POST',
         endpoint_url,
