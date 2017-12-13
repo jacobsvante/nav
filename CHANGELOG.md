@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.2 (2017-12-13)
+
+* Allow passing in additional data alongside CreateMultiple entries list
+
 ## 3.0.1 (2017-12-12)
 
 * Only call `logging.basicConfig` when run as a CLI utility. Should be set by the user of this package when run programmatically.

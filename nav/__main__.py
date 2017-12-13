@@ -99,6 +99,7 @@ def codeunit(
 
 @argh.arg('-f', '--filters', nargs='+', type=str)
 @argh.arg('-e', '--entries', nargs='+', type=str)
+@argh.arg('-a', '--additional_data', nargs='+', type=str)
 @argh.arg('-x', '--xmltodict-force-list', nargs='+', type=str)
 def page(
     method: 'Method to use',
@@ -108,6 +109,7 @@ def page(
     password: 'Web services password' = None,
     filters: 'Filters to apply to a ReadMultiple query' = (),
     entries: 'Entries to create when method is CreateMultiple' = (),
+    additional_data: 'Additional data to pass alongside the main entries to create with CreateMultiple' = (),
     json_transform: 'Return data as json' = False,
     interactive: 'Interactive mode' = True,
     num_results: 'Amount of results to return' = 0,
@@ -134,6 +136,9 @@ def page(
             )
             for entry in entries
         ],
+        additional_data=collections.OrderedDict(
+            ad.split('=') for ad in additional_data
+        ),
         to_python=json_transform,
         num_results=num_results,
         force_list=xmltodict_force_list,
