@@ -44,6 +44,20 @@ def _make_filters(filter_template, filters):
     ])
 
 
+def _make_elements(entry, field_prefix=''):
+    """Make XML elements from dict `entry`"""
+    if not entry:
+        return ''
+    generated_entry = ''
+    for key, val in entry.items():
+        generated_entry += '<{2}{0}>{1}</{2}{0}>\n'.format(
+            key,
+            xml.sax.saxutils.escape((val)),
+            field_prefix,
+        )
+    return generated_entry
+
+
 def _extract_results(data, tags, default=NOT_SET):
     for tag in tags:
         data = data[tag]
@@ -131,7 +145,7 @@ def codeunit(
     </soapenv:Body>
 </soapenv:Envelope>
     """
-    filters = _make_filters("<int:{0}>{1}</int:{0}>", filters)
+    filters = _make_elements(filters, field_prefix='int:')
     payload = payload_tmpl.format(
         function_name=function_name,
         filters=filters,
@@ -192,27 +206,19 @@ def render_ReadMultiple_page_template(page, filters, num_results):
         )
 
 
-def render_CreateMultiple_page_template(page, entries, num_results):
-        generated_entries = []
-        for entry in entries:
-            generated_entry = ''
-            for key, val in entry.items():
-                generated_entry += '<{0}>{1}</{0}>\n'.format(
-                    key,
-                    xml.sax.saxutils.escape((val)),
-                )
-            generated_entries.append(generated_entry)
-        joined_generated_entries = '\n'.join([
-            '<{0}>{1}</{0}>'.format(page, e)
-            for e in generated_entries
-        ])
-
+def render_CreateMultiple_page_template(
+    page,
+    entries,
+    num_results,
+    additional_data=None,
+):
         return """
         <?xml version="1.0" encoding="utf-8"?>
         <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:sal="urn:microsoft-dynamics-schemas/page/{page_lower}">
           <soapenv:Header/>
             <soapenv:Body>
                 <CreateMultiple xmlns="urn:microsoft-dynamics-schemas/page/{page_lower}">
+                    {additional_data}
                     <{page}_List>
                         {entries}
                     </{page}_List>
@@ -222,7 +228,11 @@ def render_CreateMultiple_page_template(page, entries, num_results):
         """.format(
             page=page,
             page_lower=page.lower(),
-            entries=joined_generated_entries,
+            entries='\n'.join([
+                '<{0}>\n{1}\n</{0}>'.format(page, _make_elements(entry))
+                for entry in entries
+            ]),
+            additional_data=_make_elements(additional_data),
         )
 
 
@@ -238,6 +248,7 @@ def render_page_template(method, page, **tmpl_kw):
             page=page,
             entries=tmpl_kw.pop('entries'),
             num_results=tmpl_kw.pop('num_results'),
+            additional_data=tmpl_kw.pop('additional_data'),
         )
     else:
         raise RuntimeError('Unsupported method {}'.format(method))
@@ -252,6 +263,7 @@ def page(
     num_results: 'Maximum amount of results to return for ReadMultiple. Defaults to no limit.' = 0,
     filters: 'Apply filters to a ReadMultiple result' = None,
     entries: 'Entries to pass to CreateMultiple' = None,
+    additional_data: 'Any additional data to pass along with the entries when using Create Multiple.' = None,
     to_python: 'Convert to standard python data structures instead of an lxml tree.' = True,
     results_only: 'If `to_python` is True, this controls wether to only return the results within the body of the XML envelope.' = True,
     force_list: 'If `to_python` is also True then this setting allows forcing specified element tags to always be returned as lists, even if they only contain a single child element (standard behavior is to convert to dict then). Default is to apply this to elements with same name as the specified entrypoint. Set to False to disable this default.' = None,
@@ -264,6 +276,7 @@ def page(
         filters=filters,
         entries=entries,
         num_results=num_results,
+        additional_data=additional_data,
     ).strip().encode('utf-8')
 
     resp = request(
