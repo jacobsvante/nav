@@ -1,16 +1,10 @@
 from setuptools import setup
 
-# Get package metadata. To avoid loading the package __init__ we
-# use exec instead.
-with open('nav/_metadata.py') as fh:
-    metadata = {}
-    exec(fh.read(), globals(), metadata)
-
 setup_kwargs = dict(
     name='nav',
-    version=metadata['__version__'],
+    version='4.0.0',
     description='Conveniently make requests to Microsoft Dynamics NAV Web Services',
-    packages=['nav'],
+    packages=['nav', 'nav.wrappers'],
     include_package_data=True,
     author='Jacob Magnusson',
     author_email='m@jacobian.se',
@@ -18,13 +12,15 @@ setup_kwargs = dict(
     license='BSD',
     platforms='any',
     install_requires=[
-        'argh',
         'lxml',
-        'requests',
         'requests-ntlm',
-        'xmltodict',
+        'zeep',
     ],
     extras_require={
+        'cli': [
+            'argh',
+            'ipython',
+        ],
         'test': {
             'coverage>=4.2',
             'flake8>=3.0.4',

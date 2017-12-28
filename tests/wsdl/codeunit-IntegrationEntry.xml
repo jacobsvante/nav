@@ -1,0 +1,51 @@
+<definitions targetNamespace="urn:microsoft-dynamics-schemas/codeunit/IntegrationEntry" xmlns="http://schemas.xmlsoap.org/wsdl/" xmlns:tns="urn:microsoft-dynamics-schemas/codeunit/IntegrationEntry">
+  <types>
+    <schema elementFormDefault="qualified" targetNamespace="urn:microsoft-dynamics-schemas/codeunit/IntegrationEntry" xmlns="http://www.w3.org/2001/XMLSchema">
+      <element name="HelloWorld">
+        <complexType>
+          <sequence>
+            <element maxOccurs="1" minOccurs="1" name="iName" type="string"/>
+            <element maxOccurs="1" minOccurs="1" name="oGreeting" type="string"/>
+          </sequence>
+        </complexType>
+      </element>
+      <element name="HelloWorld_Result">
+        <complexType>
+          <sequence>
+            <element maxOccurs="1" minOccurs="1" name="return_value" type="boolean"/>
+            <element maxOccurs="1" minOccurs="1" name="oGreeting" type="string"/>
+          </sequence>
+        </complexType>
+      </element>
+    </schema>
+  </types>
+  <message name="HelloWorld">
+    <part element="tns:HelloWorld" name="parameters"/>
+  </message>
+  <message name="HelloWorld_Result">
+    <part element="tns:HelloWorld_Result" name="parameters"/>
+  </message>
+  <portType name="IntegrationEntry_Port">
+    <operation name="HelloWorld">
+      <input message="tns:HelloWorld" name="HelloWorld"/>
+      <output message="tns:HelloWorld_Result" name="HelloWorld_Result"/>
+    </operation>
+  </portType>
+  <binding name="IntegrationEntry_Binding" type="tns:IntegrationEntry_Port">
+    <binding transport="http://schemas.xmlsoap.org/soap/http" xmlns="http://schemas.xmlsoap.org/wsdl/soap/"/>
+    <operation name="HelloWorld">
+      <operation soapAction="urn:microsoft-dynamics-schemas/codeunit/IntegrationEntry:HelloWorld" style="document" xmlns="http://schemas.xmlsoap.org/wsdl/soap/"/>
+      <input name="HelloWorld">
+        <body use="literal" xmlns="http://schemas.xmlsoap.org/wsdl/soap/"/>
+      </input>
+      <output name="HelloWorld_Result">
+        <body use="literal" xmlns="http://schemas.xmlsoap.org/wsdl/soap/"/>
+      </output>
+    </operation>
+  </binding>
+  <service name="IntegrationEntry">
+    <port binding="tns:IntegrationEntry_Binding" name="IntegrationEntry_Port">
+      <address xmlns="http://schemas.xmlsoap.org/wsdl/soap/" location="http://navtest:7080/DynamicsNAV/WS/CRONUS-Company-Ltd/Codeunit/IntegrationEntry"/>
+    </port>
+  </service>
+</definitions>

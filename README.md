@@ -2,7 +2,6 @@
 
 [![Travis CI build status (Linux)](https://travis-ci.org/jmagnusson/nav.svg?branch=master)](https://travis-ci.org/jmagnusson/nav)
 [![PyPI version](https://img.shields.io/pypi/v/nav.svg)](https://pypi.python.org/pypi/nav/)
-[![Downloads from PyPI per month](https://img.shields.io/pypi/dm/nav.svg)](https://pypi.python.org/pypi/nav/)
 [![License](https://img.shields.io/pypi/l/nav.svg)](https://pypi.python.org/pypi/nav/)
 [![Available as wheel](https://img.shields.io/pypi/wheel/nav.svg)](https://pypi.python.org/pypi/nav/)
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/nav.svg)](https://pypi.python.org/pypi/nav/)
@@ -11,3 +10,13 @@
 [![Code Health](https://landscape.io/github/jmagnusson/nav/master/landscape.svg?style=flat)](https://landscape.io/github/jmagnusson/nav/master)
 
 Make requests to Microsoft Dynamics NAV Web Services
+
+## Installation
+
+Programmatic use only:
+
+    pip install nav
+
+With CLI support:
+
+    pip install nav[cli]
