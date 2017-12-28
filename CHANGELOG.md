@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.1 (2017-12-28)
+
+* Fix some regressions introduced by the 5.0.0 release
+
 ## 5.0.0 (2017-12-28)
 
 Never thought I'd have to do this but here's the second major version in the same day. Had to bump because order of arguments to `nav.meta/service/page/codeunit` has changed again and some arguments have been renamed to not be misleading.
