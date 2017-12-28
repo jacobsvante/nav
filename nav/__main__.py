@@ -36,7 +36,7 @@ def _get_password(config_getter, password):
 
 def meta(
     endpoint_type: 'Web services endpoint type',
-    name: 'Web services endpoint',
+    service_name: 'Web services endpoint',
     base_url: 'The base URL for the endpoint.' = None,
     username: 'Web services username' = None,
     password: 'Web services password' = None,
@@ -50,7 +50,7 @@ def meta(
     password = _get_password(c, password)
     data = nav.meta(
         endpoint_type=endpoint_type,
-        name=name,
+        service_name=service_name,
         base_url=c('base_url', base_url),
         username=username,
         password=password,
