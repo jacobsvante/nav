@@ -20,8 +20,14 @@ import zeep
 import zeep.cache
 
 from . import config  # noqa
-from . import constants
 from ._metadata import __version__, __version_info__  # noqa
+from .constants import (
+    DEFAULT_WSDL_CACHE_EXPIRATION,
+    CODEUNIT,
+    PAGE,
+    ReadMultiple,
+    CreateMultiple,
+)
 
 logger = logging.getLogger('nav')
 
@@ -33,7 +39,7 @@ class NAV:
         base_url: 'The base URL for the NAV web service.',
         username: 'Username (usually includes AD domain)',
         password: 'Password',
-        cache_expiration: 'How long WSDL files are cached in memory. Set to something Falsy like False/0/None to disable this functionality.' = constants.DEFAULT_WSDL_CACHE_EXPIRATION,
+        cache_expiration: 'How long WSDL files are cached in memory. Set to something Falsy like False/0/None to disable this functionality.' = DEFAULT_WSDL_CACHE_EXPIRATION,
     ):
         self.base_url = base_url
         self.username = username
@@ -65,7 +71,7 @@ class NAV:
 
     @staticmethod
     def _make_binding(endpoint_type, service_name):
-        if endpoint_type == constants.PAGE:
+        if endpoint_type == PAGE:
             urlpath_service_name = service_name.lower()
         else:
             urlpath_service_name = service_name
@@ -93,7 +99,7 @@ class NAV:
         service_name: 'Name of the page/codeunit',
     ):
         """Initiate a WSDL service"""
-        assert endpoint_type in (constants.CODEUNIT, constants.PAGE)
+        assert endpoint_type in (CODEUNIT, PAGE)
         binding = self._make_binding(endpoint_type, service_name)
         if binding in self._service_cache:
             srvc = self._service_cache[binding]
@@ -109,7 +115,7 @@ class NAV:
         service_name: 'Name of the page/codeunit',
     ):
         """Get the definition of Codeunit or a Page"""
-        assert endpoint_type in (constants.CODEUNIT, constants.PAGE)
+        assert endpoint_type in (CODEUNIT, PAGE)
         client = self._make_client(
             endpoint_type,
             service_name,
@@ -124,7 +130,7 @@ class NAV:
     ):
         """Get a Codeunit's results"""
         srvc = self._make_service(
-            endpoint_type=constants.CODEUNIT,
+            endpoint_type=CODEUNIT,
             service_name=service_name,
         )
         func = getattr(srvc, function)
@@ -143,7 +149,7 @@ class NAV:
     ):
         """Get a Page's results or create entries"""
         srvc = self._make_service(
-            endpoint_type=constants.PAGE,
+            endpoint_type=PAGE,
             service_name=service_name,
         )
 
@@ -156,12 +162,12 @@ class NAV:
             # disable validation of min/maxOccurs.
             filters = {zeep.helpers.Nil(): zeep.helpers.Nil()}
 
-        if function == 'ReadMultiple':
+        if function == ReadMultiple:
             data = srvc.ReadMultiple(
                 filter=self._make_page_filters(filters),
                 setSize=num_results,
             )
-        elif function == 'CreateMultiple':
+        elif function == CreateMultiple:
             if not entries:
                 raise ValueError(
                     "Can't run Page CreateMultiple without passing in "
@@ -178,6 +184,32 @@ class NAV:
             raise NotImplementedError
 
         return self._zeep_object_to_builtin_types(data, default=[])
+
+    def read_multiple(
+        self,
+        service_name: 'The name of the WS page',
+        num_results: 'Maximum amount of results to return. Defaults to no limit.' = 0,
+        filters: 'Apply filters to the query' = None,
+    ):
+        return self.page(
+            service_name=service_name,
+            function=ReadMultiple,
+            num_results=num_results,
+            filters=filters,
+        )
+
+    def create_multiple(
+        self,
+        service_name: 'The name of the WS page',
+        entries: 'Entries to pass to CreateMultiple' = None,
+        additional_data: 'Any additional data to pass along with the entries when using CreateMultiple.' = None,
+    ):
+        return self.page(
+            service_name=service_name,
+            function=CreateMultiple,
+            entries=entries,
+            additional_data=additional_data,
+        )
 
 
 def _nav_factory(base_url, username, password, cache_expiration):
@@ -196,7 +228,7 @@ def meta(base_url, username, password, *args, **kw):
         password,
         cache_expiration=kw.pop(
             'cache_expiration',
-            constants.DEFAULT_WSDL_CACHE_EXPIRATION,
+            DEFAULT_WSDL_CACHE_EXPIRATION,
         ),
     ).meta(*args, **kw)
 
@@ -208,7 +240,7 @@ def service(base_url, username, password, *args, **kw):
         password,
         cache_expiration=kw.pop(
             'cache_expiration',
-            constants.DEFAULT_WSDL_CACHE_EXPIRATION,
+            DEFAULT_WSDL_CACHE_EXPIRATION,
         ),
     )._make_service(*args, **kw)
 
@@ -220,7 +252,7 @@ def page(base_url, username, password, *args, **kw):
         password,
         cache_expiration=kw.pop(
             'cache_expiration',
-            constants.DEFAULT_WSDL_CACHE_EXPIRATION,
+            DEFAULT_WSDL_CACHE_EXPIRATION,
         ),
     ).page(*args, **kw)
 
@@ -232,6 +264,6 @@ def codeunit(base_url, username, password, *args, **kw):
         password,
         cache_expiration=kw.pop(
             'cache_expiration',
-            constants.DEFAULT_WSDL_CACHE_EXPIRATION,
+            DEFAULT_WSDL_CACHE_EXPIRATION,
         ),
     ).codeunit(*args, **kw)

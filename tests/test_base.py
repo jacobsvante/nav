@@ -65,7 +65,7 @@ def dummy_request_callback(request):
     if '/Codeunit' in request.url:
         data = CODEUNIT_RESPONSE_DATA
     elif '/Page/' in request.url:
-        if 'CreateMultiple' in request.headers['SOAPAction']:
+        if nav.CreateMultiple in request.headers['SOAPAction']:
             data = PAGE_CREATEMULTIPLE_RESPONSE_DATA
         else:
             data = PAGE_READMULTIPLE_RESPONSE_DATA
@@ -108,7 +108,7 @@ def add_responses():
 def test_nav_class():
     nv = nav.NAV(BASE_URL, 'x', 'y')
 
-    data = nv.page('CustomerList', 'ReadMultiple')
+    data = nv.page('CustomerList', nav.ReadMultiple)
     assert data[0]['No'] == '123'
     assert data[1]['No'] == '456'
 
@@ -129,13 +129,13 @@ def test_nav_class_service_cache():
 
     assert len(nv._service_cache) == 0
 
-    nv.page('CustomerList', 'ReadMultiple')
+    nv.page('CustomerList', nav.ReadMultiple)
     assert len(nv._service_cache) == 1
 
-    nv.page('CustomerList', 'ReadMultiple')
+    nv.page('CustomerList', nav.ReadMultiple)
     assert len(nv._service_cache) == 1
 
-    nv.page('CustomerList', 'CreateMultiple', entries=[{}])
+    nv.page('CustomerList', nav.CreateMultiple, entries=[{}])
     assert len(nv._service_cache) == 1  # Still same WS endpoint
 
     nv.codeunit(
@@ -178,9 +178,18 @@ def test_codeunit_HelloWorld():
 
 @pytest.mark.usefixtures('add_responses')
 def test_page_ReadMultiple():
-    data = nav.page(BASE_URL, 'x', 'y', 'CustomerList', 'ReadMultiple')
+    data = nav.page(BASE_URL, 'x', 'y', 'CustomerList', nav.ReadMultiple)
     assert data[0]['No'] == '123'
     assert data[1]['No'] == '456'
+
+
+@pytest.mark.usefixtures('add_responses')
+def test_nav_class_read_multiple():
+    nv = nav.NAV(BASE_URL, 'x', 'y')
+
+    data1 = nv.page('CustomerList', nav.ReadMultiple)
+    data2 = nv.read_multiple('CustomerList')
+    assert data1 == data2
 
 
 @pytest.mark.usefixtures('add_responses')
@@ -190,7 +199,7 @@ def test_page_CreateMultiple():
         'x',
         'y',
         'CustomerList',
-        'CreateMultiple',
+        nav.CreateMultiple,
         entries=[
             OrderedDict([['No', 'DISCARDED'], ['Name', 'DISCARDED']]),
             OrderedDict([['No', 'DISCARDED'], ['Name', 'DISCARDED']]),
@@ -198,6 +207,25 @@ def test_page_CreateMultiple():
     )
     assert data[0]['No'] == '234567'
     assert data[1]['No'] == '345678'
+
+
+@pytest.mark.usefixtures('add_responses')
+def test_nav_class_create_multiple():
+    nv = nav.NAV(BASE_URL, 'x', 'y')
+
+    data1 = nav.page(
+        BASE_URL,
+        'x',
+        'y',
+        'CustomerList',
+        nav.CreateMultiple,
+        entries=[{}],
+    )
+    data2 = nv.create_multiple(
+        'CustomerList',
+        entries=[{}],
+    )
+    assert data1 == data2
 
 
 def test_entry_point_runnable():

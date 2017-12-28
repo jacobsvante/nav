@@ -5,6 +5,7 @@
 Never thought I'd have to do this but here's the second major version in the same day. Had to bump because order of arguments to `nav.meta/service/page/codeunit` has changed again and some arguments have been renamed to not be misleading.
 
 * Feature: New class `nav.NAV` for easier programmatic access
+* Feature: Shortcut methods on `nav.NAV` object - `nav.NAV.read_multiple()` and `nav.NAV.create_multiple()`
 * Feature: Cache WS client service objects to speed up subsequent calls to WS endpoints
 * Feature: Add in-memory WSDL and XSD definition caching for faster access when calling the same endpoint multiple times. Defaults to 3600 seconds and can be overridden in the `nav.NAV` constructor
 
