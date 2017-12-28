@@ -1,5 +1,16 @@
 # Changelog
 
+## 4.0.0 (2017-12-28)
+
+* Rewrite to make use of the dedicated SOAP library `zeep`, which gives us a number of benefits:
+    * Always returns the correct type, no need for `force_list`.
+    * Automatic validation of passed in filters and data
+* Performance is a bit worse (about 20%) but this can be improved with WSDL definition caching in a future release
+* Feature: New CLI command for interacting with the NAV web services
+* Breaking change: `nav.page` function name argument has moved to after page name arg to make the API more consistent with `nav.codeunit`. Same goes for CLI equivalent.
+* Breaking change: CLI dependencies are now an optional install. See `README.md` for details on how to install.
+* Change: Don't set log level in CLI usage unless explicitly specified
+
 ## 3.0.2 (2017-12-13)
 
 * Allow passing in additional data alongside CreateMultiple entries list

@@ -1,0 +1,107 @@
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/" xmlns:tns="urn:microsoft-dynamics-schemas/page/customerlist" targetNamespace="urn:microsoft-dynamics-schemas/page/customerlist">
+  <types>
+    <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" targetNamespace="urn:microsoft-dynamics-schemas/page/customerlist">
+      <xsd:complexType name="CustomerList">
+        <xsd:sequence>
+          <xsd:element minOccurs="0" maxOccurs="1" name="No" type="xsd:string"/>
+          <xsd:element minOccurs="0" maxOccurs="1" name="Name" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="CustomerList_List">
+        <xsd:sequence>
+          <xsd:element minOccurs="1" maxOccurs="unbounded" name="CustomerList" type="tns:CustomerList"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:simpleType name="CustomerList_Fields">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="No"/>
+          <xsd:enumeration value="Name"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+      <xsd:complexType name="CustomerList_Filter">
+        <xsd:sequence>
+          <xsd:element minOccurs="1" maxOccurs="1" name="Field" type="tns:CustomerList_Fields"/>
+          <xsd:element minOccurs="1" maxOccurs="1" name="Criteria" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:element name="ReadMultiple">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element minOccurs="1" maxOccurs="unbounded" name="filter" type="tns:CustomerList_Filter"/>
+            <xsd:element minOccurs="0" maxOccurs="1" name="bookmarkKey" type="xsd:string"/>
+            <xsd:element minOccurs="1" maxOccurs="1" name="setSize" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="ReadMultiple_Result">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element minOccurs="0" maxOccurs="1" name="ReadMultiple_Result" type="tns:CustomerList_List"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="CreateMultiple">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element minOccurs="1" maxOccurs="1" name="CustomerList_List" type="tns:CustomerList_List"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="CreateMultiple_Result">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element minOccurs="1" maxOccurs="1" name="CustomerList_List" type="tns:CustomerList_List"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+    </xsd:schema>
+  </types>
+  <message name="ReadMultiple">
+    <part name="parameters" element="tns:ReadMultiple"/>
+  </message>
+  <message name="ReadMultiple_Result">
+    <part name="parameters" element="tns:ReadMultiple_Result"/>
+  </message>
+  <message name="CreateMultiple">
+    <part name="parameters" element="tns:CreateMultiple"/>
+  </message>
+  <message name="CreateMultiple_Result">
+    <part name="parameters" element="tns:CreateMultiple_Result"/>
+  </message>
+  <portType name="CustomerList_Port">
+    <operation name="ReadMultiple">
+      <input name="ReadMultiple" message="tns:ReadMultiple"/>
+      <output name="ReadMultiple_Result" message="tns:ReadMultiple_Result"/>
+    </operation>
+    <operation name="CreateMultiple">
+      <input name="CreateMultiple" message="tns:CreateMultiple"/>
+      <output name="CreateMultiple_Result" message="tns:CreateMultiple_Result"/>
+    </operation>
+  </portType>
+  <binding name="CustomerList_Binding" type="tns:CustomerList_Port">
+    <binding xmlns="http://schemas.xmlsoap.org/wsdl/soap/" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="ReadMultiple">
+      <operation xmlns="http://schemas.xmlsoap.org/wsdl/soap/" soapAction="urn:microsoft-dynamics-schemas/page/customerlist:ReadMultiple" style="document"/>
+      <input name="ReadMultiple">
+        <body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="literal"/>
+      </input>
+      <output name="ReadMultiple_Result">
+        <body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="literal"/>
+      </output>
+    </operation>
+    <operation name="CreateMultiple">
+      <operation xmlns="http://schemas.xmlsoap.org/wsdl/soap/" soapAction="urn:microsoft-dynamics-schemas/page/customerlist:CreateMultiple" style="document"/>
+      <input name="CreateMultiple">
+        <body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="literal"/>
+      </input>
+      <output name="CreateMultiple_Result">
+        <body xmlns="http://schemas.xmlsoap.org/wsdl/soap/" use="literal"/>
+      </output>
+    </operation>
+  </binding>
+  <service name="CustomerList_Service">
+    <port name="CustomerList_Port" binding="tns:CustomerList_Binding">
+      <address xmlns="http://schemas.xmlsoap.org/wsdl/soap/" location="http://navtest:7080/DynamicsNAV/WS/CRONUS-Company-Ltd/Page/CustomerList"/>
+    </port>
+  </service>
+</definitions>

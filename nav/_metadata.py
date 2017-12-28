@@ -1,2 +1,4 @@
-__version_info__ = (3, 0, 2)
-__version__ = '.'.join(map(str, __version_info__))
+import pkg_resources
+
+__version__ = pkg_resources.require('nav')[0].version
+__version_info__ = tuple(int(p) for p in __version__.split('.'))

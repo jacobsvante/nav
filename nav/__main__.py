@@ -1,17 +1,25 @@
 import collections
 import getpass
 import functools
-import json
 import logging
+import logging.config
 
+import IPython
 import argh
+import lxml
+import traitlets
 
 import nav
+import nav.utils
+from nav.wrappers import json
 
 
 def _set_log_level(log_level):
-    logging.basicConfig()
-    nav.logger.setLevel(getattr(logging, log_level.upper()))
+    if log_level is not None:
+        level = getattr(logging, log_level.upper())
+        logging.basicConfig()
+        logging.getLogger('zeep').setLevel(level)
+        nav.logger.setLevel(level)
 
 
 def _get_username(config_getter, username):
@@ -26,53 +34,100 @@ def _get_password(config_getter, password):
     )
 
 
-@argh.arg('-x', '--xmltodict-force-list', nargs='+', type=str)
 def meta(
-    endpoint: 'Web services endpoint',
     endpoint_type: 'Web services endpoint type',
+    name: 'Web services endpoint',
     base_url: 'The base URL for the endpoint.' = None,
     username: 'Web services username' = None,
     password: 'Web services password' = None,
-    json_transform: 'Return data as json' = False,
-    interactive: 'Interactive mode' = True,
-    xmltodict_force_list: 'Force list for these XML tags. From xmltodict.force_keys.' = (),
-    log_level: 'The log level to use' = 'WARNING',
+    log_level: 'The log level to use' = None,
     config_section: 'The config section to get settings from.' = 'nav',
 ):
-    """Info about an endpoint"""
+    """Print the definition of a Codeunit or a Page"""
     _set_log_level(log_level)
     c = functools.partial(nav.config.get, config_section)
     username = _get_username(c, username)
     password = _get_password(c, password)
     data = nav.meta(
-        endpoint=endpoint,
         endpoint_type=endpoint_type,
+        name=name,
         base_url=c('base_url', base_url),
         username=username,
         password=password,
-        to_python=json_transform,
-        force_list=xmltodict_force_list,
     )
-    if json_transform:
-        return json.dumps(data, indent=2)
+    return lxml.etree.tostring(data, pretty_print=True).decode()
+
+
+@argh.arg('-t', '--endpoint-type', type=str)
+@argh.arg('-e', '--endpoint', type=str)
+def interact(
+    endpoint_type: 'Web services endpoint type' = None,
+    endpoint: 'Web services endpoint' = None,
+    base_url: 'The base URL for the endpoint.' = None,
+    username: 'Web services username' = None,
+    password: 'Web services password' = None,
+    log_level: 'The log level to use' = None,
+    config_section: 'The config section to get settings from.' = 'nav',
+):
+    """Starts a REPL to enable live interaction with a WSDL endpoint"""
+    _set_log_level(log_level)
+    c = functools.partial(nav.config.get, config_section)
+    base_url = c('base_url', base_url)
+    username = _get_username(c, username)
+    password = _get_password(c, password)
+
+    banner1_tmpl = """Welcome to nav client interactive mode
+Available vars:
+    {additional_arg}
+    `create_service` - Create a WS service to make calls to
+
+Example usage:
+    service = create_service('Page', 'ItemList')
+    results = service.ReadMultiple(filter=dict(No='123'), setSize=0)
+
+    {additional_arg_example}
+"""
+
+    def create_service(endpoint_type, endpoint_name):
+        endpoint_url = nav.make_endpoint_url(
+            base_url, endpoint_type, endpoint_name
+        )
+        client = nav.make_client(endpoint_url, username, password)
+        binding = nav.make_binding(endpoint_type, endpoint_name)
+        return nav.make_service(client, endpoint_url, binding)
+
+    user_ns = {
+        'create_service': create_service,
+    }
+
+    if endpoint_type and endpoint:
+        banner1 = banner1_tmpl.format(
+            additional_arg='`{0}` - Service to run WS calls against'.format(endpoint.lower()),
+            additional_arg_example="{0}_results = {0}.ReadMultiple(filter=dict(Field='MyField', Criteria='My criteria'), setSize=0)".format(endpoint.lower())
+        )
+        user_ns[endpoint.lower()] = create_service(endpoint_type, endpoint)
     else:
-        return nav.pprint_xml(data)
+        banner1 = banner1_tmpl.format(
+            additional_arg='',
+            additional_arg_example='',
+        )
+
+    IPython.embed(
+        user_ns=user_ns,
+        banner1=banner1,
+        config=traitlets.config.Config(colors='LightBG')
+    )
 
 
 @argh.arg('-f', '--filters', nargs='+', type=str)
-@argh.arg('-x', '--xmltodict-force-list', nargs='+', type=str)
 def codeunit(
-    endpoint: 'Web services endpoint',
-    function_name: 'Name of the function to run',
+    name: 'Name of the code unit',
+    func: 'Name of the function to run',
     base_url: 'The base URL for the endpoint.' = None,
     username: 'Web services username' = None,
     password: 'Web services password' = None,
     filters: 'Apply filters to the page search' = (),
-    json_transform: 'Return data as json' = False,
-    interactive: 'Interactive mode' = True,
-    xmltodict_force_list: 'Force list for these XML keys. From xmltodict.force_keys.' = (),
-    log_level: 'The log level to use' = 'WARNING',
-    results_only: 'If `json_transform` is True, this controls wether to only return the results within the body of the XML envelope.' = False,
+    log_level: 'The log level to use' = None,
     config_section: 'The config section to get settings from.' = 'nav',
 ):
     """Get a Codeunit's results"""
@@ -81,41 +136,33 @@ def codeunit(
     username = _get_username(c, username)
     password = _get_password(c, password)
     data = nav.codeunit(
-        endpoint=endpoint,
         base_url=c('base_url', base_url),
-        function_name=function_name,
+        name=name,
+        function=func,
         username=username,
         password=password,
-        filters=collections.OrderedDict(f.split('=') for f in filters),
-        to_python=json_transform,
-        force_list=xmltodict_force_list,
-        results_only=results_only,
+        filters=nav.utils.convert_string_filter_values(
+            collections.OrderedDict(f.split('=') for f in filters)
+        ),
     )
-    if json_transform:
-        return json.dumps(data, indent=2)
-    else:
-        return nav.pprint_xml(data)
+    return json.dumps(data, indent=2)
 
 
 @argh.arg('-f', '--filters', nargs='+', type=str)
+@argh.arg('-n', '--num-results')
 @argh.arg('-e', '--entries', nargs='+', type=str)
 @argh.arg('-a', '--additional_data', nargs='+', type=str)
-@argh.arg('-x', '--xmltodict-force-list', nargs='+', type=str)
 def page(
-    method: 'Method to use',
-    endpoint: 'Web services endpoint',
+    name: 'Name of the WS page',
+    func: 'Name of the function to use',
     base_url: 'The base URL for the endpoint.' = None,
     username: 'Web services username' = None,
     password: 'Web services password' = None,
     filters: 'Filters to apply to a ReadMultiple query' = (),
-    entries: 'Entries to create when method is CreateMultiple' = (),
+    entries: 'Entries to create when function is CreateMultiple' = (),
     additional_data: 'Additional data to pass alongside the main entries to create with CreateMultiple' = (),
-    json_transform: 'Return data as json' = False,
-    interactive: 'Interactive mode' = True,
     num_results: 'Amount of results to return' = 0,
-    xmltodict_force_list: 'If `json_transform` is also True then this setting allows forcing specified element tags to always be returned as lists, even if they only contain a single child element (standard behavior is to convert to dict then). Default is to apply this to elements with same name as the specified entrypoint.' = None,
-    log_level: 'The log level to use' = 'WARNING',
-    results_only: 'If `json_transform` is True, this controls wether to only return the results within the body of the XML envelope.' = False,
+    log_level: 'The log level to use' = None,
     config_section: 'The config section to get settings from.' = 'nav',
 ):
     """Get a Page's results"""
@@ -123,35 +170,37 @@ def page(
     c = functools.partial(nav.config.get, config_section)
     username = _get_username(c, username)
     password = _get_password(c, password)
+
     data = nav.page(
-        method=method,
-        endpoint=endpoint,
+        name=name,
+        function=func,
         base_url=c('base_url', base_url),
         username=username,
         password=password,
-        filters=collections.OrderedDict(f.split('=') for f in filters),
+        filters=nav.utils.convert_string_filter_values(
+            collections.OrderedDict(f.split('=') for f in filters)
+        ),
         entries=[
-            collections.OrderedDict(
-                field.split('=') for field in entry.split(':')
+            nav.utils.convert_string_filter_values(
+                collections.OrderedDict(
+                    field.split('=') for field in entry.split(',')
+                )
             )
             for entry in entries
         ],
-        additional_data=collections.OrderedDict(
-            ad.split('=') for ad in additional_data
+        additional_data=nav.utils.convert_string_filter_values(
+            collections.OrderedDict(
+                ad.split('=') for ad in additional_data
+            )
         ),
-        to_python=json_transform,
         num_results=num_results,
-        force_list=xmltodict_force_list,
-        results_only=results_only,
     )
-    if json_transform:
-        return json.dumps(data, indent=2)
-    else:
-        return nav.pprint_xml(data)
+    return json.dumps(data, indent=2)
 
 
 command_parser = argh.ArghParser()
 command_parser.add_commands([
+    interact,
     meta,
     codeunit,
     page,

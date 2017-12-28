@@ -11,307 +11,153 @@ More info here::
 
     https://msdn.microsoft.com/en-us/library/dd355398.aspx
 """
+import collections
 import logging
 
-import lxml.etree
 import requests
 import requests_ntlm
-import xml.sax.saxutils
-import xmltodict
+import zeep
 
 from . import config  # noqa
+from . import constants
 from ._metadata import __version__, __version_info__  # noqa
-
-NOT_SET = object()
 
 logger = logging.getLogger('nav')
 
 
-def pprint_xml(etree, pretty_print=True):
-    return lxml.etree.tostring(etree, pretty_print=pretty_print).decode()
+def _make_page_filters(filters):
+    return [
+        collections.OrderedDict([
+            ('Field', field),
+            ('Criteria', criteria),
+        ])
+        for field, criteria in filters.items()
+    ]
 
 
-def _make_endpoint_url(base_url, *args):
+def make_endpoint_url(base_url, *args):
     if base_url.endswith('/'):
         base_url = base_url[:-1]
     return '/'.join([base_url, *args])
 
 
-def _make_filters(filter_template, filters):
-    return '\n'.join([
-        filter_template.format(k, xml.sax.saxutils.escape(v))
-        for k, v in (filters or {}).items()
-    ])
+def make_binding(endpoint_type, service_name):
+    if endpoint_type == constants.PAGE:
+        urlpath_service_name = service_name.lower()
+    else:
+        urlpath_service_name = service_name
+    return '{{urn:microsoft-dynamics-schemas/{0}/{1}}}{2}_Binding'.format(
+        endpoint_type.lower(),
+        urlpath_service_name,
+        service_name,
+    )
 
 
-def _make_elements(entry, field_prefix=''):
-    """Make XML elements from dict `entry`"""
-    if not entry:
-        return ''
-    generated_entry = ''
-    for key, val in entry.items():
-        generated_entry += '<{2}{0}>{1}</{2}{0}>\n'.format(
-            key,
-            xml.sax.saxutils.escape((val)),
-            field_prefix,
-        )
-    return generated_entry
+def make_client(endpoint_url, username, password):
+    session = requests.Session()
+    session.auth = requests_ntlm.HttpNtlmAuth(username, password)
+    transport = zeep.transports.Transport(session=session)
+    return zeep.Client(endpoint_url, transport=transport, strict=False)
 
 
-def _extract_results(data, tags, default=NOT_SET):
-    for tag in tags:
-        data = data[tag]
-        if data is None:
-            if default is NOT_SET:
-                raise ValueError(
-                    'Data was `None`, expected value for tag {}.'.format(tag)
-                )
-            else:
-                return default
-    return data
+def make_service(client, endpoint_url, binding):
+    return client.create_service(binding, endpoint_url)
 
 
-def request(
-        method,
-        url,
-        username,
-        password,
-        headers=None,
-        data=None
+def service(
+    base_url: 'The base URL for the endpoint.',
+    endpoint_type: 'The endpoint type ("Page" or "Codeunit")',
+    name: 'Name of the page/codeunit',
+    username: 'Username (usually includes AD domain)',
+    password: 'Password',
 ):
-    headers = dict(
-        **{'content-type': 'text/xml;charset=UTF-8'},
-        **(headers or {})
-    )
-    logger.debug('Request to: {}'.format(url))
-    logger.debug('Headers: {}'.format(headers))
-    logger.debug('Payload: {}'.format(data))
-    resp = requests.request(
-        method,
-        url,
-        auth=requests_ntlm.HttpNtlmAuth(username, password),
-        headers=headers,
-        data=data,
-    )
-    try:
-        resp.raise_for_status()
-    except Exception:
-        logger.error(resp.text)
-        raise
-    return resp
+    """Initiate a WSDL service"""
+    assert endpoint_type in (constants.CODEUNIT, constants.PAGE)
+    endpoint_url = make_endpoint_url(base_url, endpoint_type, name)
+    binding = make_binding(endpoint_type, name)
+    client = make_client(endpoint_url, username, password)
+    return make_service(client, endpoint_url, binding)
 
 
 def meta(
     base_url: 'The base URL for the endpoint.',
     endpoint_type: 'The endpoint type ("Page" or "Codeunit")',
-    endpoint: 'Web services endpoint (i.e. the last part of the URL)',
+    name: 'Name of the page/codeunit',
     username: 'Username (usually includes AD domain)',
     password: 'Password',
-    to_python: 'Convert to standard python data structures instead of an lxml tree.' = True,
-    force_list: 'If `to_python` is also True then this setting allows forcing specified element tags to always be returned as lists, even if they only contain a single child element (standard behavior is to convert to dict then).' = (),
 ):
-    """Info about an endpoint"""
-    assert endpoint_type in ('Page', 'Codeunit')
-    endpoint_url = _make_endpoint_url(base_url, endpoint_type, endpoint)
-    resp = request('GET', endpoint_url, username, password)
-    if to_python:
-        return xmltodict.parse(resp.text, force_list=force_list)
-    else:
-        return lxml.etree.fromstring(resp.text)
+    """Get the definition of Codeunit or a Page"""
+    assert endpoint_type in (constants.CODEUNIT, constants.PAGE)
+    endpoint_url = make_endpoint_url(base_url, endpoint_type, name)
+    client = make_client(endpoint_url, username, password)
+    return client.wsdl._get_xml_document(client.wsdl.location)
 
 
 def codeunit(
     base_url: 'The base URL for the endpoint.',
-    endpoint: 'The code unit to fetch',
-    function_name: 'Name of the function to run',
+    name: 'The name of the code unit to use',
+    function: 'Name of the code unit function to run',
     username: 'Username (usually includes AD domain)',
     password: 'Password',
     filters: 'Apply filters to the page search' = None,
-    to_python: 'Convert to standard python data structures instead of an lxml tree.' = True,
-    results_only: 'If `to_python` is True, this controls wether to only return the results within the body of the XML envelope.' = True,
-    force_list: 'If `to_python` is also True then this setting allows forcing specified element tags to always be returned as lists, even if they only contain a single child element (standard behavior is to convert to dict then).' = (),
 ):
     """Get a Codeunit's results"""
-    endpoint_url = _make_endpoint_url(base_url, 'Codeunit', endpoint)
-
-    payload_tmpl = """
-<?xml version="1.0" encoding="utf-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:int="urn:microsoft-dynamics-schemas/codeunit/{codeunit}" xmlns:x50="urn:microsoft-dynamics-nav/xmlports/x50033">
-    <soapenv:Header/>
-    <soapenv:Body>
-        <int:{function_name}>
-            {filters}
-        </int:{function_name}>
-    </soapenv:Body>
-</soapenv:Envelope>
-    """
-    filters = _make_elements(filters, field_prefix='int:')
-    payload = payload_tmpl.format(
-        function_name=function_name,
-        filters=filters,
-        codeunit=endpoint,
-    ).strip().encode('utf-8')
-    resp = request(
-        'POST', endpoint_url, username, password,
-        headers={
-            'SOAPAction': (
-                'urn:microsoft-dynamics-schemas/codeunit/{}:{}'
-                .format(endpoint, function_name)
-            )
-        },
-        data=payload,
+    srvc = service(
+        base_url=base_url,
+        endpoint_type=constants.CODEUNIT,
+        name=name,
+        username=username,
+        password=password,
     )
-    if to_python:
-        data = xmltodict.parse(resp.text, force_list=force_list)
-        if results_only:
-            return _extract_results(
-                data,
-                [
-                    'Soap:Envelope',
-                    'Soap:Body',
-                    '{}_Result'.format(function_name),
-                ],
-            )
-        else:
-            return data
-    else:
-        return lxml.etree.fromstring(resp.text)
+    func = getattr(srvc, function)
+    data = func(**filters)
 
-
-def render_ReadMultiple_page_template(page, filters, num_results):
-        generated_filters = _make_filters(
-            """
-            <sal:filter>
-                <sal:Field>{}</sal:Field>
-                <sal:Criteria>{}</sal:Criteria>
-            </sal:filter>
-            """,
-            filters,
-        )
-        return """
-            <?xml version="1.0" encoding="utf-8"?>
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:sal="urn:microsoft-dynamics-schemas/page/{page_lower}">
-              <soapenv:Header/>
-              <soapenv:Body>
-                 <sal:ReadMultiple>
-                    {filters}
-                    <sal:setSize>{num_results}</sal:setSize>
-                 </sal:ReadMultiple>
-              </soapenv:Body>
-            </soapenv:Envelope>
-        """.format(
-            page_lower=page.lower(),
-            filters=generated_filters,
-            num_results=num_results,
-        )
-
-
-def render_CreateMultiple_page_template(
-    page,
-    entries,
-    num_results,
-    additional_data=None,
-):
-        return """
-        <?xml version="1.0" encoding="utf-8"?>
-        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:sal="urn:microsoft-dynamics-schemas/page/{page_lower}">
-          <soapenv:Header/>
-            <soapenv:Body>
-                <CreateMultiple xmlns="urn:microsoft-dynamics-schemas/page/{page_lower}">
-                    {additional_data}
-                    <{page}_List>
-                        {entries}
-                    </{page}_List>
-                </CreateMultiple>
-            </soapenv:Body>
-        </soapenv:Envelope>
-        """.format(
-            page=page,
-            page_lower=page.lower(),
-            entries='\n'.join([
-                '<{0}>\n{1}\n</{0}>'.format(page, _make_elements(entry))
-                for entry in entries
-            ]),
-            additional_data=_make_elements(additional_data),
-        )
-
-
-def render_page_template(method, page, **tmpl_kw):
-    if method == 'ReadMultiple':
-        return render_ReadMultiple_page_template(
-            page=page,
-            filters=tmpl_kw.pop('filters'),
-            num_results=tmpl_kw.pop('num_results'),
-        )
-    elif method == 'CreateMultiple':
-        return render_CreateMultiple_page_template(
-            page=page,
-            entries=tmpl_kw.pop('entries'),
-            num_results=tmpl_kw.pop('num_results'),
-            additional_data=tmpl_kw.pop('additional_data'),
-        )
-    else:
-        raise RuntimeError('Unsupported method {}'.format(method))
+    return zeep.helpers.serialize_object(data) or []
 
 
 def page(
     base_url: 'The base URL for the endpoint.',
-    method: 'The method to use. Currently supported methods are ReadMultiple and CreateMultiple.',
-    endpoint: 'The page to fetch',
+    name: 'The name of the WS page',
+    function: 'The function to use. Currently supported functions are ReadMultiple and CreateMultiple.',
     username: 'Username (usually includes AD domain)',
     password: 'Password',
     num_results: 'Maximum amount of results to return for ReadMultiple. Defaults to no limit.' = 0,
     filters: 'Apply filters to a ReadMultiple result' = None,
     entries: 'Entries to pass to CreateMultiple' = None,
-    additional_data: 'Any additional data to pass along with the entries when using Create Multiple.' = None,
-    to_python: 'Convert to standard python data structures instead of an lxml tree.' = True,
-    results_only: 'If `to_python` is True, this controls wether to only return the results within the body of the XML envelope.' = True,
-    force_list: 'If `to_python` is also True then this setting allows forcing specified element tags to always be returned as lists, even if they only contain a single child element (standard behavior is to convert to dict then). Default is to apply this to elements with same name as the specified entrypoint. Set to False to disable this default.' = None,
+    additional_data: 'Any additional data to pass along with the entries when using CreateMultiple.' = None,
 ):
-    """Get a Page's results"""
-    endpoint_url = _make_endpoint_url(base_url, 'Page', endpoint)
-    payload = render_page_template(
-        method,
-        page=endpoint,
-        filters=filters,
-        entries=entries,
-        num_results=num_results,
-        additional_data=additional_data,
-    ).strip().encode('utf-8')
-
-    resp = request(
-        'POST',
-        endpoint_url,
-        username,
-        password,
-        headers={
-            'SOAPAction': (
-                'urn:microsoft-dynamics-schemas/page/{}:{}'
-                .format(endpoint, method)
-            )
-        },
-        data=payload,
+    """Get a Page's results or create entries"""
+    srvc = service(
+        base_url=base_url,
+        endpoint_type=constants.PAGE,
+        name=name,
+        username=username,
+        password=password,
     )
 
-    if to_python:
-        if force_list is None:
-            xmltodict_kw = {'force_list': endpoint}
-        else:
-            xmltodict_kw = {} if force_list is False else force_list
-        data = xmltodict.parse(resp.text, **xmltodict_kw)
-        if results_only:
-            result_tag = '{}_Result'.format(method)
-            tags = ['Soap:Envelope', 'Soap:Body', result_tag]
-            if method == 'ReadMultiple':
-                tags.append(result_tag)
-            elif method == 'CreateMultiple':
-                tags.append('{}_List'.format(endpoint))
-            return _extract_results(
-                data,
-                [*tags, endpoint],
-                default=[],
-            )
-        else:
-            return data
+    if filters:
+        filters = _make_page_filters(filters)
     else:
-        return lxml.etree.fromstring(resp.text)
+        # NOTE: Workaround because the definition files for NAV 2009 R2 pages
+        # requires the filter element to be defined (minOccurs=1), causing
+        # zeep to raise a ValidationError exception. However, manually doing
+        # an HTTP request to the web service, without passing in a filter
+        # works. Perhaps create a ticket regarding a feature to temporarily
+        # disable validation of min/maxOccurs.
+        filters = _make_page_filters({zeep.helpers.Nil(): zeep.helpers.Nil()})
+
+    if function == 'ReadMultiple':
+        data = srvc.ReadMultiple(
+            filter=filters,
+            setSize=num_results,
+        )
+    elif function == 'CreateMultiple':
+        kw = dict(additional_data or {})
+        kw.update({
+            '{}_List'.format(name): [{name: entry} for entry in entries],
+        })
+        data = srvc.CreateMultiple(**kw)
+    else:
+        raise NotImplementedError
+
+    return zeep.helpers.serialize_object(data) or []
