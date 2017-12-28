@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.0.2 (2017-12-28)
+
+* Catch invalid service types / functions before NAV is hit
+* Show the error message from NAV when it gives back an error during client creation
+
 ## 5.0.1 (2017-12-28)
 
 * Fix some regressions introduced by the 5.0.0 release

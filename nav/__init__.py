@@ -20,6 +20,7 @@ import zeep
 import zeep.cache
 
 from . import config  # noqa
+from . import exceptions
 from ._metadata import __version__, __version_info__  # noqa
 from .constants import (
     DEFAULT_WSDL_CACHE_EXPIRATION,
@@ -81,7 +82,34 @@ class NAV:
             service_name,
         )
 
+    def _run_capture_500(self, fun, *args, **kw):
+        try:
+            return fun(*args, **kw)
+        except requests.exceptions.HTTPError as exc:
+            raise exceptions.NAVHTTPError(
+                *exc.args, request=exc.request, response=exc.response,
+            )
+
+    @staticmethod
+    def validate_service_type(s):
+        allowed_values = (CODEUNIT, PAGE)
+        if s not in allowed_values:
+            raise exceptions.InvalidServiceType(
+                '`{}` is not a valid service type, must be one of {}'
+                .format(s, allowed_values)
+            )
+
+    @staticmethod
+    def validate_supported_page_function(s):
+        allowed_values = (ReadMultiple, CreateMultiple)
+        if s not in allowed_values:
+            raise exceptions.UnsupportedPageFunction(
+                '`{}` is not a supported service function, must be one of {}'
+                .format(s, allowed_values)
+            )
+
     def _make_client(self, endpoint_type, service_name):
+        self.validate_service_type(endpoint_type)
         url = self._make_endpoint_url(endpoint_type, service_name)
         if self.cache_expiration:
             cache = zeep.cache.InMemoryCache(timeout=self.cache_expiration)
@@ -91,7 +119,10 @@ class NAV:
         session = requests.Session()
         session.auth = requests_ntlm.HttpNtlmAuth(self.username, self.password)
         transport = zeep.transports.Transport(session=session, cache=cache)
-        return zeep.Client(url, transport=transport, strict=False)
+
+        return self._run_capture_500(
+            zeep.Client, url, transport=transport, strict=False
+        )
 
     def _make_service(
         self,
@@ -99,7 +130,6 @@ class NAV:
         service_name: 'Name of the page/codeunit',
     ):
         """Initiate a WSDL service"""
-        assert endpoint_type in (CODEUNIT, PAGE)
         binding = self._make_binding(endpoint_type, service_name)
         if binding in self._service_cache:
             srvc = self._service_cache[binding]
@@ -115,7 +145,6 @@ class NAV:
         service_name: 'Name of the page/codeunit',
     ):
         """Get the definition of Codeunit or a Page"""
-        assert endpoint_type in (CODEUNIT, PAGE)
         client = self._make_client(
             endpoint_type,
             service_name,
@@ -148,6 +177,8 @@ class NAV:
         additional_data: 'Any additional data to pass along with the entries when using CreateMultiple.' = None,
     ):
         """Get a Page's results or create entries"""
+        self.validate_supported_page_function(function)
+
         srvc = self._make_service(
             endpoint_type=PAGE,
             service_name=service_name,
