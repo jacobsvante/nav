@@ -88,13 +88,14 @@ Example usage:
     {additional_arg_example}
 """
 
-    def create_service(endpoint_type, endpoint_name):
-        endpoint_url = nav.make_endpoint_url(
-            base_url, endpoint_type, endpoint_name
+    def create_service(endpoint_type, service_name):
+        return nav.service(
+            base_url,
+            username,
+            password,
+            endpoint_type,
+            service_name,
         )
-        client = nav.make_client(endpoint_url, username, password)
-        binding = nav.make_binding(endpoint_type, endpoint_name)
-        return nav.make_service(client, endpoint_url, binding)
 
     user_ns = {
         'create_service': create_service,
@@ -119,14 +120,14 @@ Example usage:
     )
 
 
-@argh.arg('-f', '--filters', nargs='+', type=str)
+@argh.arg('-f', '--func-args', nargs='+', type=str)
 def codeunit(
-    name: 'Name of the code unit',
+    service_name: 'Name of the code unit',
     func: 'Name of the function to run',
     base_url: 'The base URL for the endpoint.' = None,
     username: 'Web services username' = None,
     password: 'Web services password' = None,
-    filters: 'Apply filters to the page search' = (),
+    func_args: 'Add these kw args to the codeunit function call' = (),
     log_level: 'The log level to use' = None,
     config_section: 'The config section to get settings from.' = 'nav',
 ):
@@ -137,12 +138,12 @@ def codeunit(
     password = _get_password(c, password)
     data = nav.codeunit(
         base_url=c('base_url', base_url),
-        name=name,
-        function=func,
         username=username,
         password=password,
-        filters=nav.utils.convert_string_filter_values(
-            collections.OrderedDict(f.split('=') for f in filters)
+        service_name=service_name,
+        function=func,
+        func_args=nav.utils.convert_string_filter_values(
+            collections.OrderedDict(f.split('=') for f in func_args)
         ),
     )
     return json.dumps(data, indent=2)
@@ -153,7 +154,7 @@ def codeunit(
 @argh.arg('-e', '--entries', nargs='+', type=str)
 @argh.arg('-a', '--additional_data', nargs='+', type=str)
 def page(
-    name: 'Name of the WS page',
+    service_name: 'Name of the WS page',
     func: 'Name of the function to use',
     base_url: 'The base URL for the endpoint.' = None,
     username: 'Web services username' = None,
@@ -172,11 +173,11 @@ def page(
     password = _get_password(c, password)
 
     data = nav.page(
-        name=name,
-        function=func,
         base_url=c('base_url', base_url),
         username=username,
         password=password,
+        service_name=service_name,
+        function=func,
         filters=nav.utils.convert_string_filter_values(
             collections.OrderedDict(f.split('=') for f in filters)
         ),

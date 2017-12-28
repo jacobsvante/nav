@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup_kwargs = dict(
     name='nav',
-    version='4.0.0',
+    version='5.0.0',
     description='Conveniently make requests to Microsoft Dynamics NAV Web Services',
     packages=['nav', 'nav.wrappers'],
     include_package_data=True,

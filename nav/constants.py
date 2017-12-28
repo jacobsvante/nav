@@ -1,5 +1,7 @@
 from zeep.xsd.elements.element import NotSet
 
+DEFAULT_WSDL_CACHE_EXPIRATION = 3600
+
 CODEUNIT = 'Codeunit'
 PAGE = 'Page'
 

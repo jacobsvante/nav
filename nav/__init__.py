@@ -17,6 +17,7 @@ import logging
 import requests
 import requests_ntlm
 import zeep
+import zeep.cache
 
 from . import config  # noqa
 from . import constants
@@ -25,139 +26,212 @@ from ._metadata import __version__, __version_info__  # noqa
 logger = logging.getLogger('nav')
 
 
-def _make_page_filters(filters):
-    return [
-        collections.OrderedDict([
-            ('Field', field),
-            ('Criteria', criteria),
-        ])
-        for field, criteria in filters.items()
-    ]
+class NAV:
 
+    def __init__(
+        self,
+        base_url: 'The base URL for the NAV web service.',
+        username: 'Username (usually includes AD domain)',
+        password: 'Password',
+        cache_expiration: 'How long WSDL files are cached in memory. Set to something Falsy like False/0/None to disable this functionality.' = constants.DEFAULT_WSDL_CACHE_EXPIRATION,
+    ):
+        self.base_url = base_url
+        self.username = username
+        self.password = password
+        self.cache_expiration = cache_expiration
+        self._service_cache = {}
 
-def make_endpoint_url(base_url, *args):
-    if base_url.endswith('/'):
-        base_url = base_url[:-1]
-    return '/'.join([base_url, *args])
+    @staticmethod
+    def _zeep_object_to_builtin_types(data, default=False):
+        d = zeep.helpers.serialize_object(data)
+        if d is None and default is not False:
+            return default
+        return d
 
+    @staticmethod
+    def _make_page_filters(filters):
+        return [
+            collections.OrderedDict([
+                ('Field', field),
+                ('Criteria', criteria),
+            ])
+            for field, criteria in filters.items()
+        ]
 
-def make_binding(endpoint_type, service_name):
-    if endpoint_type == constants.PAGE:
-        urlpath_service_name = service_name.lower()
-    else:
-        urlpath_service_name = service_name
-    return '{{urn:microsoft-dynamics-schemas/{0}/{1}}}{2}_Binding'.format(
-        endpoint_type.lower(),
-        urlpath_service_name,
-        service_name,
-    )
+    def _make_endpoint_url(self, *args):
+        if self.base_url.endswith('/'):
+            self.base_url = self.base_url[:-1]
+        return '/'.join([self.base_url, *args])
 
-
-def make_client(endpoint_url, username, password):
-    session = requests.Session()
-    session.auth = requests_ntlm.HttpNtlmAuth(username, password)
-    transport = zeep.transports.Transport(session=session)
-    return zeep.Client(endpoint_url, transport=transport, strict=False)
-
-
-def make_service(client, endpoint_url, binding):
-    return client.create_service(binding, endpoint_url)
-
-
-def service(
-    base_url: 'The base URL for the endpoint.',
-    endpoint_type: 'The endpoint type ("Page" or "Codeunit")',
-    name: 'Name of the page/codeunit',
-    username: 'Username (usually includes AD domain)',
-    password: 'Password',
-):
-    """Initiate a WSDL service"""
-    assert endpoint_type in (constants.CODEUNIT, constants.PAGE)
-    endpoint_url = make_endpoint_url(base_url, endpoint_type, name)
-    binding = make_binding(endpoint_type, name)
-    client = make_client(endpoint_url, username, password)
-    return make_service(client, endpoint_url, binding)
-
-
-def meta(
-    base_url: 'The base URL for the endpoint.',
-    endpoint_type: 'The endpoint type ("Page" or "Codeunit")',
-    name: 'Name of the page/codeunit',
-    username: 'Username (usually includes AD domain)',
-    password: 'Password',
-):
-    """Get the definition of Codeunit or a Page"""
-    assert endpoint_type in (constants.CODEUNIT, constants.PAGE)
-    endpoint_url = make_endpoint_url(base_url, endpoint_type, name)
-    client = make_client(endpoint_url, username, password)
-    return client.wsdl._get_xml_document(client.wsdl.location)
-
-
-def codeunit(
-    base_url: 'The base URL for the endpoint.',
-    name: 'The name of the code unit to use',
-    function: 'Name of the code unit function to run',
-    username: 'Username (usually includes AD domain)',
-    password: 'Password',
-    filters: 'Apply filters to the page search' = None,
-):
-    """Get a Codeunit's results"""
-    srvc = service(
-        base_url=base_url,
-        endpoint_type=constants.CODEUNIT,
-        name=name,
-        username=username,
-        password=password,
-    )
-    func = getattr(srvc, function)
-    data = func(**filters)
-
-    return zeep.helpers.serialize_object(data) or []
-
-
-def page(
-    base_url: 'The base URL for the endpoint.',
-    name: 'The name of the WS page',
-    function: 'The function to use. Currently supported functions are ReadMultiple and CreateMultiple.',
-    username: 'Username (usually includes AD domain)',
-    password: 'Password',
-    num_results: 'Maximum amount of results to return for ReadMultiple. Defaults to no limit.' = 0,
-    filters: 'Apply filters to a ReadMultiple result' = None,
-    entries: 'Entries to pass to CreateMultiple' = None,
-    additional_data: 'Any additional data to pass along with the entries when using CreateMultiple.' = None,
-):
-    """Get a Page's results or create entries"""
-    srvc = service(
-        base_url=base_url,
-        endpoint_type=constants.PAGE,
-        name=name,
-        username=username,
-        password=password,
-    )
-
-    if filters:
-        filters = _make_page_filters(filters)
-    else:
-        # NOTE: Workaround because the definition files for NAV 2009 R2 pages
-        # requires the filter element to be defined (minOccurs=1), causing
-        # zeep to raise a ValidationError exception. However, manually doing
-        # an HTTP request to the web service, without passing in a filter
-        # works. Perhaps create a ticket regarding a feature to temporarily
-        # disable validation of min/maxOccurs.
-        filters = _make_page_filters({zeep.helpers.Nil(): zeep.helpers.Nil()})
-
-    if function == 'ReadMultiple':
-        data = srvc.ReadMultiple(
-            filter=filters,
-            setSize=num_results,
+    @staticmethod
+    def _make_binding(endpoint_type, service_name):
+        if endpoint_type == constants.PAGE:
+            urlpath_service_name = service_name.lower()
+        else:
+            urlpath_service_name = service_name
+        return '{{urn:microsoft-dynamics-schemas/{0}/{1}}}{2}_Binding'.format(
+            endpoint_type.lower(),
+            urlpath_service_name,
+            service_name,
         )
-    elif function == 'CreateMultiple':
-        kw = dict(additional_data or {})
-        kw.update({
-            '{}_List'.format(name): [{name: entry} for entry in entries],
-        })
-        data = srvc.CreateMultiple(**kw)
-    else:
-        raise NotImplementedError
 
-    return zeep.helpers.serialize_object(data) or []
+    def _make_client(self, endpoint_type, service_name):
+        url = self._make_endpoint_url(endpoint_type, service_name)
+        if self.cache_expiration:
+            cache = zeep.cache.InMemoryCache(timeout=self.cache_expiration)
+        else:
+            cache = None
+
+        session = requests.Session()
+        session.auth = requests_ntlm.HttpNtlmAuth(self.username, self.password)
+        transport = zeep.transports.Transport(session=session, cache=cache)
+        return zeep.Client(url, transport=transport, strict=False)
+
+    def _make_service(
+        self,
+        endpoint_type: 'The endpoint type ("Page" or "Codeunit")',
+        service_name: 'Name of the page/codeunit',
+    ):
+        """Initiate a WSDL service"""
+        assert endpoint_type in (constants.CODEUNIT, constants.PAGE)
+        binding = self._make_binding(endpoint_type, service_name)
+        if binding in self._service_cache:
+            srvc = self._service_cache[binding]
+        else:
+            client = self._make_client(endpoint_type, service_name)
+            srvc = client.create_service(binding, client.wsdl.location)
+            self._service_cache[binding] = srvc
+        return srvc
+
+    def meta(
+        self,
+        endpoint_type: 'The endpoint type ("Page" or "Codeunit")',
+        service_name: 'Name of the page/codeunit',
+    ):
+        """Get the definition of Codeunit or a Page"""
+        assert endpoint_type in (constants.CODEUNIT, constants.PAGE)
+        client = self._make_client(
+            endpoint_type,
+            service_name,
+        )
+        return client.wsdl._get_xml_document(client.wsdl.location)
+
+    def codeunit(
+        self,
+        service_name: 'The name of the code unit to use',
+        function: 'Name of the code unit function to run',
+        func_args: 'Add these kw args to the codeunit function call' = None,
+    ):
+        """Get a Codeunit's results"""
+        srvc = self._make_service(
+            endpoint_type=constants.CODEUNIT,
+            service_name=service_name,
+        )
+        func = getattr(srvc, function)
+        data = func(**func_args)
+
+        return self._zeep_object_to_builtin_types(data, default=[])
+
+    def page(
+        self,
+        service_name: 'The name of the WS page',
+        function: 'The function to use. Currently supported functions are ReadMultiple and CreateMultiple.',
+        num_results: 'Maximum amount of results to return for ReadMultiple. Defaults to no limit.' = 0,
+        filters: 'Apply filters to a ReadMultiple result' = None,
+        entries: 'Entries to pass to CreateMultiple' = None,
+        additional_data: 'Any additional data to pass along with the entries when using CreateMultiple.' = None,
+    ):
+        """Get a Page's results or create entries"""
+        srvc = self._make_service(
+            endpoint_type=constants.PAGE,
+            service_name=service_name,
+        )
+
+        if not filters:
+            # NOTE: Workaround because the definition files for NAV 2009 R2 pages
+            # requires the filter element to be defined (minOccurs=1), causing
+            # zeep to raise a ValidationError exception. However, manually doing
+            # an HTTP request to the web service, without passing in a filter
+            # works. Perhaps create a ticket regarding a feature to temporarily
+            # disable validation of min/maxOccurs.
+            filters = {zeep.helpers.Nil(): zeep.helpers.Nil()}
+
+        if function == 'ReadMultiple':
+            data = srvc.ReadMultiple(
+                filter=self._make_page_filters(filters),
+                setSize=num_results,
+            )
+        elif function == 'CreateMultiple':
+            if not entries:
+                raise ValueError(
+                    "Can't run Page CreateMultiple without passing in "
+                    "any `entries`"
+                )
+            kw = dict(additional_data or {})
+            kw.update({
+                '{}_List'.format(service_name): [
+                    {service_name: entry} for entry in entries
+                ],
+            })
+            data = srvc.CreateMultiple(**kw)
+        else:
+            raise NotImplementedError
+
+        return self._zeep_object_to_builtin_types(data, default=[])
+
+
+def _nav_factory(base_url, username, password, cache_expiration):
+    return NAV(
+        base_url=base_url,
+        username=username,
+        password=password,
+        cache_expiration=cache_expiration,
+    )
+
+
+def meta(base_url, username, password, *args, **kw):
+    return _nav_factory(
+        base_url,
+        username,
+        password,
+        cache_expiration=kw.pop(
+            'cache_expiration',
+            constants.DEFAULT_WSDL_CACHE_EXPIRATION,
+        ),
+    ).meta(*args, **kw)
+
+
+def service(base_url, username, password, *args, **kw):
+    return _nav_factory(
+        base_url,
+        username,
+        password,
+        cache_expiration=kw.pop(
+            'cache_expiration',
+            constants.DEFAULT_WSDL_CACHE_EXPIRATION,
+        ),
+    )._make_service(*args, **kw)
+
+
+def page(base_url, username, password, *args, **kw):
+    return _nav_factory(
+        base_url,
+        username,
+        password,
+        cache_expiration=kw.pop(
+            'cache_expiration',
+            constants.DEFAULT_WSDL_CACHE_EXPIRATION,
+        ),
+    ).page(*args, **kw)
+
+
+def codeunit(base_url, username, password, *args, **kw):
+    return _nav_factory(
+        base_url,
+        username,
+        password,
+        cache_expiration=kw.pop(
+            'cache_expiration',
+            constants.DEFAULT_WSDL_CACHE_EXPIRATION,
+        ),
+    ).codeunit(*args, **kw)

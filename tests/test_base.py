@@ -105,8 +105,60 @@ def add_responses():
 
 
 @pytest.mark.usefixtures('add_responses')
+def test_nav_class():
+    nv = nav.NAV(BASE_URL, 'x', 'y')
+
+    data = nv.page('CustomerList', 'ReadMultiple')
+    assert data[0]['No'] == '123'
+    assert data[1]['No'] == '456'
+
+    data = nv.codeunit(
+        'IntegrationEntry',
+        'HelloWorld',
+        func_args=dict(
+            iName='DISCARDED',
+            oGreeting='TEST'
+        ),
+    )
+    assert data['oGreeting'] == 'Test greeting'
+
+
+@pytest.mark.usefixtures('add_responses')
+def test_nav_class_service_cache():
+    nv = nav.NAV(BASE_URL, 'x', 'y')
+
+    assert len(nv._service_cache) == 0
+
+    nv.page('CustomerList', 'ReadMultiple')
+    assert len(nv._service_cache) == 1
+
+    nv.page('CustomerList', 'ReadMultiple')
+    assert len(nv._service_cache) == 1
+
+    nv.page('CustomerList', 'CreateMultiple', entries=[{}])
+    assert len(nv._service_cache) == 1  # Still same WS endpoint
+
+    nv.codeunit(
+        'IntegrationEntry',
+        'HelloWorld',
+        func_args=dict(
+            iName='DISCARDED',
+            oGreeting='TEST'
+        ),
+    )
+    assert len(nv._service_cache) == 2
+
+
+@pytest.mark.usefixtures('add_responses')
+def test_service():
+    srvc = nav.service(BASE_URL, 'x', 'y', 'Codeunit', 'IntegrationEntry')
+    data = srvc.HelloWorld(iName='DISCARDED', oGreeting='TEST')
+    assert data['oGreeting'] == 'Test greeting'
+
+
+@pytest.mark.usefixtures('add_responses')
 def test_meta():
-    data = nav.meta(BASE_URL, 'Codeunit', 'IntegrationEntry', 'x', 'y')
+    data = nav.meta(BASE_URL, 'x', 'y', 'Codeunit', 'IntegrationEntry')
     data_bytes = lxml.etree.tostring(data)
     assert b'HelloWorld_Result' in data_bytes
 
@@ -115,18 +167,18 @@ def test_meta():
 def test_codeunit_HelloWorld():
     data = nav.codeunit(
         BASE_URL,
-        'IntegrationEntry',
-        'HelloWorld',
         'x',
         'y',
-        filters=dict(iName='DISCARDED', oGreeting='TEST'),
+        'IntegrationEntry',
+        'HelloWorld',
+        func_args=dict(iName='DISCARDED', oGreeting='TEST'),
     )
     assert data['oGreeting'] == 'Test greeting'
 
 
 @pytest.mark.usefixtures('add_responses')
 def test_page_ReadMultiple():
-    data = nav.page(BASE_URL, 'CustomerList', 'ReadMultiple', 'x', 'y')
+    data = nav.page(BASE_URL, 'x', 'y', 'CustomerList', 'ReadMultiple')
     assert data[0]['No'] == '123'
     assert data[1]['No'] == '456'
 
@@ -135,10 +187,10 @@ def test_page_ReadMultiple():
 def test_page_CreateMultiple():
     data = nav.page(
         BASE_URL,
-        'CustomerList',
-        'CreateMultiple',
         'x',
         'y',
+        'CustomerList',
+        'CreateMultiple',
         entries=[
             OrderedDict([['No', 'DISCARDED'], ['Name', 'DISCARDED']]),
             OrderedDict([['No', 'DISCARDED'], ['Name', 'DISCARDED']]),

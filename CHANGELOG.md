@@ -1,11 +1,21 @@
 # Changelog
 
+## 5.0.0 (2017-12-28)
+
+Never thought I'd have to do this but here's the second major version in the same day. Had to bump because order of arguments to `nav.meta/service/page/codeunit` has changed again and some arguments have been renamed to not be misleading.
+
+* Feature: New class `nav.NAV` for easier programmatic access
+* Feature: Cache WS client service objects to speed up subsequent calls to WS endpoints
+* Feature: Add in-memory WSDL and XSD definition caching for faster access when calling the same endpoint multiple times. Defaults to 3600 seconds and can be overridden in the `nav.NAV` constructor
+
+
 ## 4.0.0 (2017-12-28)
 
 * Rewrite to make use of the dedicated SOAP library `zeep`, which gives us a number of benefits:
-    * Always returns the correct type, no need for `force_list`.
+    * Always returns the correct type for all types of fields, no need for `force_list`.
+    * Fields that are not returned in the HTTP response because of null values are created by zeep which should make the returned data more easy to work with.
     * Automatic validation of passed in filters and data
-* Performance is a bit worse (about 20%) but this can be improved with WSDL definition caching in a future release
+* Performance is a bit worse for the classic `nav.meta`, `nav.codeunit`, `nav.page` (about 20%) but this can be improved with WSDL definition caching in a future release
 * Feature: New CLI command for interacting with the NAV web services
 * Breaking change: `nav.page` function name argument has moved to after page name arg to make the API more consistent with `nav.codeunit`. Same goes for CLI equivalent.
 * Breaking change: CLI dependencies are now an optional install. See `README.md` for details on how to install.
