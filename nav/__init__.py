@@ -207,7 +207,7 @@ class NAV:
             kw = dict(additional_data or {})
             kw.update({
                 '{}_List'.format(service_name): [
-                    {service_name: entry} for entry in entries
+                    {service_name: [entry for entry in entries]}
                 ],
             })
             data = srvc.CreateMultiple(**kw)

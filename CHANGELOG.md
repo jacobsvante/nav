@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.3 (2017-12-28)
+
+* Fix regression in 4.0.0 that caused CreateMultiple to only send in the first entry
+
 ## 5.0.2 (2017-12-28)
 
 * Catch invalid service types / functions before NAV is hit
