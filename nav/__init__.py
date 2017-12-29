@@ -193,10 +193,13 @@ class NAV:
             # disable validation of min/maxOccurs.
             filters = {zeep.helpers.Nil(): zeep.helpers.Nil()}
 
+        call_kw = dict(additional_data or {})
+
         if function == ReadMultiple:
             data = srvc.ReadMultiple(
                 filter=self._make_page_filters(filters),
                 setSize=num_results,
+                **call_kw,
             )
         elif function == CreateMultiple:
             if not entries:
@@ -204,13 +207,12 @@ class NAV:
                     "Can't run Page CreateMultiple without passing in "
                     "any `entries`"
                 )
-            kw = dict(additional_data or {})
-            kw.update({
+            call_kw.update({
                 '{}_List'.format(service_name): [
                     {service_name: [entry for entry in entries]}
                 ],
             })
-            data = srvc.CreateMultiple(**kw)
+            data = srvc.CreateMultiple(**call_kw)
         else:
             raise NotImplementedError
 

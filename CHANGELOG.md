@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.4 (2017-12-29)
+
+* Allow `nav.NAV.page(additional_data={})` to work with `ReadMultiple` as well
+
 ## 5.0.3 (2017-12-28)
 
 * Fix regression in 4.0.0 that caused CreateMultiple to only send in the first entry
