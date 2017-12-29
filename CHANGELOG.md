@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.5 (2017-12-29)
+
+* `nav.NAV.read_multiple` now also takes `additional_data` as an argument.
+
 ## 5.0.4 (2017-12-29)
 
 * Allow `nav.NAV.page(additional_data={})` to work with `ReadMultiple` as well

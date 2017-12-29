@@ -174,7 +174,7 @@ class NAV:
         num_results: 'Maximum amount of results to return for ReadMultiple. Defaults to no limit.' = 0,
         filters: 'Apply filters to a ReadMultiple result' = None,
         entries: 'Entries to pass to CreateMultiple' = None,
-        additional_data: 'Any additional data to pass along with the entries when using CreateMultiple.' = None,
+        additional_data: 'Any additional data to pass along to the WS call.' = None,
     ):
         """Get a Page's results or create entries"""
         self.validate_supported_page_function(function)
@@ -223,19 +223,21 @@ class NAV:
         service_name: 'The name of the WS page',
         num_results: 'Maximum amount of results to return. Defaults to no limit.' = 0,
         filters: 'Apply filters to the query' = None,
+        additional_data: 'Any additional data to pass along to the WS call.' = None,
     ):
         return self.page(
             service_name=service_name,
             function=ReadMultiple,
             num_results=num_results,
             filters=filters,
+            additional_data=additional_data,
         )
 
     def create_multiple(
         self,
         service_name: 'The name of the WS page',
         entries: 'Entries to pass to CreateMultiple' = None,
-        additional_data: 'Any additional data to pass along with the entries when using CreateMultiple.' = None,
+        additional_data: 'Any additional data to pass along to the WS call.' = None,
     ):
         return self.page(
             service_name=service_name,
