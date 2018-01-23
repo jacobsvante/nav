@@ -41,6 +41,7 @@ def meta(
     username: 'Web services username' = None,
     password: 'Web services password' = None,
     log_level: 'The log level to use' = None,
+    insecure: "Skip certificate validation over HTTPS connections" = False,
     config_section: 'The config section to get settings from.' = 'nav',
 ):
     """Print the definition of a Codeunit or a Page"""
@@ -54,6 +55,7 @@ def meta(
         base_url=c('base_url', base_url),
         username=username,
         password=password,
+        verify_certificate=not insecure,
     )
     return lxml.etree.tostring(data, pretty_print=True).decode()
 
@@ -67,6 +69,7 @@ def interact(
     username: 'Web services username' = None,
     password: 'Web services password' = None,
     log_level: 'The log level to use' = None,
+    insecure: "Skip certificate validation over HTTPS connections" = False,
     config_section: 'The config section to get settings from.' = 'nav',
 ):
     """Starts a REPL to enable live interaction with a WSDL endpoint"""
@@ -95,6 +98,7 @@ Example usage:
             password,
             endpoint_type,
             service_name,
+            verify_certificate=not insecure,
         )
 
     user_ns = {
@@ -128,6 +132,7 @@ def codeunit(
     username: 'Web services username' = None,
     password: 'Web services password' = None,
     func_args: 'Add these kw args to the codeunit function call' = (),
+    insecure: "Skip certificate validation over HTTPS connections" = False,
     log_level: 'The log level to use' = None,
     config_section: 'The config section to get settings from.' = 'nav',
 ):
@@ -145,6 +150,7 @@ def codeunit(
         func_args=nav.utils.convert_string_filter_values(
             collections.OrderedDict(f.split('=') for f in func_args)
         ),
+        verify_certificate=not insecure,
     )
     return json.dumps(data, indent=2)
 
@@ -164,6 +170,7 @@ def page(
     additional_data: 'Additional data to pass alongside the main entries to create with CreateMultiple' = (),
     num_results: 'Amount of results to return' = 0,
     log_level: 'The log level to use' = None,
+    insecure: "Skip certificate validation over HTTPS connections" = False,
     config_section: 'The config section to get settings from.' = 'nav',
 ):
     """Get a Page's results"""
@@ -178,6 +185,7 @@ def page(
         password=password,
         service_name=service_name,
         function=func,
+        verify_certificate=not insecure,
         filters=nav.utils.convert_string_filter_values(
             collections.OrderedDict(f.split('=') for f in filters)
         ),

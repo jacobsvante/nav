@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.6 (2018-01-23)
+
+* Add ability to skip certificate verification when talking to HTTPS endpoints. Enabled through `NAV(..., verify_certificates=False)`, or passing the flag `-i/--insecure` to the CLI utilities.
+
 ## 5.0.5 (2017-12-29)
 
 * `nav.NAV.read_multiple` now also takes `additional_data` as an argument.

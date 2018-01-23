@@ -13,6 +13,8 @@ More info here::
 """
 import collections
 import logging
+import warnings
+from urllib3.exceptions import InsecureRequestWarning
 
 import requests
 import requests_ntlm
@@ -41,12 +43,19 @@ class NAV:
         username: 'Username (usually includes AD domain)',
         password: 'Password',
         cache_expiration: 'How long WSDL files are cached in memory. Set to something Falsy like False/0/None to disable this functionality.' = DEFAULT_WSDL_CACHE_EXPIRATION,
+        verify_certificate=True,
     ):
         self.base_url = base_url
         self.username = username
         self.password = password
         self.cache_expiration = cache_expiration
+        self.verify_certificate = verify_certificate
         self._service_cache = {}
+
+        # Ignore warning in case we've actively disabled
+        # certificate verification.
+        if self.verify_certificate is False:
+            warnings.simplefilter('ignore', InsecureRequestWarning)
 
     @staticmethod
     def _zeep_object_to_builtin_types(data, default=False):
@@ -117,6 +126,7 @@ class NAV:
             cache = None
 
         session = requests.Session()
+        session.verify = self.verify_certificate
         session.auth = requests_ntlm.HttpNtlmAuth(self.username, self.password)
         transport = zeep.transports.Transport(session=session, cache=cache)
 
@@ -247,12 +257,19 @@ class NAV:
         )
 
 
-def _nav_factory(base_url, username, password, cache_expiration):
+def _nav_factory(
+    base_url,
+    username,
+    password,
+    cache_expiration,
+    verify_certificate=True,
+):
     return NAV(
         base_url=base_url,
         username=username,
         password=password,
         cache_expiration=cache_expiration,
+        verify_certificate=verify_certificate,
     )
 
 
@@ -265,6 +282,7 @@ def meta(base_url, username, password, *args, **kw):
             'cache_expiration',
             DEFAULT_WSDL_CACHE_EXPIRATION,
         ),
+        verify_certificate=kw.pop('verify_certificate', True),
     ).meta(*args, **kw)
 
 
@@ -277,6 +295,7 @@ def service(base_url, username, password, *args, **kw):
             'cache_expiration',
             DEFAULT_WSDL_CACHE_EXPIRATION,
         ),
+        verify_certificate=kw.pop('verify_certificate', True),
     )._make_service(*args, **kw)
 
 
@@ -289,6 +308,7 @@ def page(base_url, username, password, *args, **kw):
             'cache_expiration',
             DEFAULT_WSDL_CACHE_EXPIRATION,
         ),
+        verify_certificate=kw.pop('verify_certificate', True),
     ).page(*args, **kw)
 
 
@@ -301,4 +321,5 @@ def codeunit(base_url, username, password, *args, **kw):
             'cache_expiration',
             DEFAULT_WSDL_CACHE_EXPIRATION,
         ),
+        verify_certificate=kw.pop('verify_certificate', True),
     ).codeunit(*args, **kw)
