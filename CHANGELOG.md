@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.7 (2018-01-24)
+
+* Handle case where zeep can't transform the elements into python structures, which puts them in the field `_raw_elements` of returned data from WS calls. As it contains XML elements and is not serializable we remove the contents of this field before dumping it to JSON. Not optimal, but better than just receiving an exception.
+
 ## 5.0.6 (2018-01-23)
 
 * Add ability to skip certificate verification when talking to HTTPS endpoints. Enabled through `NAV(..., verify_certificates=False)`, or passing the flag `-i/--insecure` to the CLI utilities.
