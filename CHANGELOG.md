@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.1.0 (2018-02-04)
+
+* Add zeep plugin `nav.plugins.RemoveNamespacePlugin` to be able to remove namespace declarations and corresponding prefixes before sending off the XML to NAV
+* Make `nav.NAV.make_service` public (previously `nav.NAV._make_service`)
+* Unknown keyword args to `nav.NAV.make_service` are now passed along to `zeep.Client`
+
 ## 5.0.7 (2018-01-24)
 
 * Handle case where zeep can't transform the elements into python structures, which puts them in the field `_raw_elements` of returned data from WS calls. As it contains XML elements and is not serializable we remove the contents of this field before dumping it to JSON. Not optimal, but better than just receiving an exception.

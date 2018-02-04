@@ -31,6 +31,7 @@ from .constants import (
     ReadMultiple,
     CreateMultiple,
 )
+from .plugins import RemoveNamespacePlugin  # noqa
 
 logger = logging.getLogger('nav')
 
@@ -117,7 +118,7 @@ class NAV:
                 .format(s, allowed_values)
             )
 
-    def _make_client(self, endpoint_type, service_name):
+    def _make_client(self, endpoint_type, service_name, **client_kwargs):
         self.validate_service_type(endpoint_type)
         url = self._make_endpoint_url(endpoint_type, service_name)
         if self.cache_expiration:
@@ -131,22 +132,33 @@ class NAV:
         transport = zeep.transports.Transport(session=session, cache=cache)
 
         return self._run_capture_500(
-            zeep.Client, url, transport=transport, strict=False
+            zeep.Client,
+            url,
+            transport=transport,
+            strict=False,
+            **client_kwargs
         )
 
-    def _make_service(
+    def make_service(
         self,
         endpoint_type: 'The endpoint type ("Page" or "Codeunit")',
         service_name: 'Name of the page/codeunit',
+        **client_kwargs: 'Additional kwargs to pass to zeep.Client'
     ):
-        """Initiate a WSDL service"""
+        """Create a WSDL service instance"""
         binding = self._make_binding(endpoint_type, service_name)
-        if binding in self._service_cache:
-            srvc = self._service_cache[binding]
+        service_cache_key = (binding, str(client_kwargs))
+
+        if service_cache_key in self._service_cache:
+            srvc = self._service_cache[service_cache_key]
         else:
-            client = self._make_client(endpoint_type, service_name)
+            client = self._make_client(
+                endpoint_type,
+                service_name,
+                **client_kwargs
+            )
             srvc = client.create_service(binding, client.wsdl.location)
-            self._service_cache[binding] = srvc
+            self._service_cache[service_cache_key] = srvc
         return srvc
 
     def meta(
@@ -168,7 +180,7 @@ class NAV:
         func_args: 'Add these kw args to the codeunit function call' = None,
     ):
         """Get a Codeunit's results"""
-        srvc = self._make_service(
+        srvc = self.make_service(
             endpoint_type=CODEUNIT,
             service_name=service_name,
         )
@@ -189,7 +201,7 @@ class NAV:
         """Get a Page's results or create entries"""
         self.validate_supported_page_function(function)
 
-        srvc = self._make_service(
+        srvc = self.make_service(
             endpoint_type=PAGE,
             service_name=service_name,
         )
@@ -296,7 +308,7 @@ def service(base_url, username, password, *args, **kw):
             DEFAULT_WSDL_CACHE_EXPIRATION,
         ),
         verify_certificate=kw.pop('verify_certificate', True),
-    )._make_service(*args, **kw)
+    ).make_service(*args, **kw)
 
 
 def page(base_url, username, password, *args, **kw):
