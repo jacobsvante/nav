@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.2 (2018-02-04)
+
+* Move `nav.NAV.to_builtins` to `nav.to_builtins`
+
 ## 5.1.1 (2018-02-04)
 
 * Make `nav.NAV.to_builtins` a public method (previously `nav.NAV._zeep_object_to_builtin_types`)

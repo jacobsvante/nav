@@ -32,6 +32,7 @@ from .constants import (
     CreateMultiple,
 )
 from .plugins import RemoveNamespacePlugin  # noqa
+from .utils import to_builtins
 
 logger = logging.getLogger('nav')
 
@@ -57,14 +58,6 @@ class NAV:
         # certificate verification.
         if self.verify_certificate is False:
             warnings.simplefilter('ignore', InsecureRequestWarning)
-
-    @staticmethod
-    def to_builtins(data, default=False):
-        """Turn zeep XML data into python built-in data structures"""
-        d = zeep.helpers.serialize_object(data)
-        if d is None and default is not False:
-            return default
-        return d
 
     @staticmethod
     def _make_page_filters(filters):
@@ -188,7 +181,7 @@ class NAV:
         func = getattr(srvc, function)
         data = func(**func_args)
 
-        return self.to_builtins(data, default=[])
+        return to_builtins(data, default=[])
 
     def page(
         self,
@@ -239,7 +232,7 @@ class NAV:
         else:
             raise NotImplementedError
 
-        return self.to_builtins(data, default=[])
+        return to_builtins(data, default=[])
 
     def read_multiple(
         self,

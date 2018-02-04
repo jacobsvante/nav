@@ -1,5 +1,7 @@
 import collections
 
+import zeep.helpers
+
 from . import constants
 
 
@@ -17,3 +19,11 @@ def convert_string_filter_values(filters):
         )
         for field, criteria in filters.items()
     )
+
+
+def to_builtins(data, default=False):
+    """Turn zeep XML data into python built-in data structures"""
+    d = zeep.helpers.serialize_object(data)
+    if d is None and default is not False:
+        return default
+    return d
