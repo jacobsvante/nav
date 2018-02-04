@@ -59,7 +59,8 @@ class NAV:
             warnings.simplefilter('ignore', InsecureRequestWarning)
 
     @staticmethod
-    def _zeep_object_to_builtin_types(data, default=False):
+    def to_builtins(data, default=False):
+        """Turn zeep XML data into python built-in data structures"""
         d = zeep.helpers.serialize_object(data)
         if d is None and default is not False:
             return default
@@ -187,7 +188,7 @@ class NAV:
         func = getattr(srvc, function)
         data = func(**func_args)
 
-        return self._zeep_object_to_builtin_types(data, default=[])
+        return self.to_builtins(data, default=[])
 
     def page(
         self,
@@ -238,7 +239,7 @@ class NAV:
         else:
             raise NotImplementedError
 
-        return self._zeep_object_to_builtin_types(data, default=[])
+        return self.to_builtins(data, default=[])
 
     def read_multiple(
         self,

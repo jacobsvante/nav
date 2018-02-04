@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.1.1 (2018-02-04)
+
+* Make `nav.NAV.to_builtins` a public method (previously `nav.NAV._zeep_object_to_builtin_types`)
+
 ## 5.1.0 (2018-02-04)
 
 * Add zeep plugin `nav.plugins.RemoveNamespacePlugin` to be able to remove namespace declarations and corresponding prefixes before sending off the XML to NAV
