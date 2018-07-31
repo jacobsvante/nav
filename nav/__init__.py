@@ -125,11 +125,13 @@ class NAV:
         session.auth = requests_ntlm.HttpNtlmAuth(self.username, self.password)
         transport = zeep.transports.Transport(session=session, cache=cache)
 
+        if 'settings' not in client_kwargs:
+            client_kwargs['settings'] = zeep.Settings(strict=False)
+
         return self._run_capture_500(
             zeep.Client,
             url,
             transport=transport,
-            strict=False,
             **client_kwargs
         )
 

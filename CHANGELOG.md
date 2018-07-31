@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.2.0 (2018-07-31)
+
+* Zeep 3.0.0+ support (required)
+
 ## 5.1.2 (2018-02-04)
 
 * Move `nav.NAV.to_builtins` to `nav.to_builtins`

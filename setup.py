@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup_kwargs = dict(
     name='nav',
-    version='5.1.2',
+    version='5.2.0',
     description='Conveniently make requests to Microsoft Dynamics NAV Web Services',
     packages=['nav', 'nav.wrappers'],
     include_package_data=True,
@@ -14,7 +14,7 @@ setup_kwargs = dict(
     install_requires=[
         'lxml',
         'requests-ntlm',
-        'zeep',
+        'zeep>=3.0.0',
     ],
     extras_require={
         'cli': [
