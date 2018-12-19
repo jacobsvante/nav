@@ -30,9 +30,10 @@ class JsonExtendedEncoder(json_impl.JSONEncoder):
         # Handle case where zeep returns the undocumented _raw_elements key
         # which is of type `collections.deque`. As the name suggestions this
         # object contains raw elements, which json will be unable to process,
-        # therefore we return None.
+        # therefore we iterate over the object and return a string
+        # representation of it.
         elif isinstance(obj, collections.deque):
-            return None
+            return str([x for x in obj])
         return super().default(obj)
 
 
