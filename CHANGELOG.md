@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.3.0 (2018-12-19)
+
+* Change: Add official support for Python 3.7
+* Change: Drop official support for Python 3.5
+* Feature: Default `nav.utils.to_builtins` to returning standard dictionaries, as we can rely on Python 3.6+ ordering in dictionaries
+
 ## 5.2.0 (2018-07-31)
 
 * Zeep 3.0.0+ support (required)

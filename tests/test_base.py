@@ -1,7 +1,6 @@
 import os
 import re
 import subprocess as subp
-from collections import OrderedDict
 
 import lxml.etree
 import pytest
@@ -201,8 +200,8 @@ def test_page_CreateMultiple():
         'CustomerList',
         nav.CreateMultiple,
         entries=[
-            OrderedDict([['No', 'DISCARDED'], ['Name', 'DISCARDED']]),
-            OrderedDict([['No', 'DISCARDED'], ['Name', 'DISCARDED']]),
+            {'No': 'DISCARDED', 'Name': 'DISCARDED'},
+            {'No': 'DISCARDED', 'Name': 'DISCARDED'},
         ],
     )
     assert data[0]['No'] == '234567'

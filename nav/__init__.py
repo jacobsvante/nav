@@ -11,7 +11,6 @@ More info here::
 
     https://msdn.microsoft.com/en-us/library/dd355398.aspx
 """
-import collections
 import logging
 import warnings
 from urllib3.exceptions import InsecureRequestWarning
@@ -62,10 +61,7 @@ class NAV:
     @staticmethod
     def _make_page_filters(filters):
         return [
-            collections.OrderedDict([
-                ('Field', field),
-                ('Criteria', criteria),
-            ])
+            {'Field': field, 'Criteria': criteria}
             for field, criteria in filters.items()
         ]
 

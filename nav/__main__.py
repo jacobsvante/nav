@@ -1,4 +1,3 @@
-import collections
 import getpass
 import functools
 import logging
@@ -148,7 +147,7 @@ def codeunit(
         service_name=service_name,
         function=func,
         func_args=nav.utils.convert_string_filter_values(
-            collections.OrderedDict(f.split('=') for f in func_args)
+            dict(f.split('=') for f in func_args)
         ),
         verify_certificate=not insecure,
     )
@@ -187,20 +186,16 @@ def page(
         function=func,
         verify_certificate=not insecure,
         filters=nav.utils.convert_string_filter_values(
-            collections.OrderedDict(f.split('=') for f in filters)
+            dict(f.split('=') for f in filters)
         ),
         entries=[
             nav.utils.convert_string_filter_values(
-                collections.OrderedDict(
-                    field.split('=') for field in entry.split(',')
-                )
+                dict(field.split('=') for field in entry.split(','))
             )
             for entry in entries
         ],
         additional_data=nav.utils.convert_string_filter_values(
-            collections.OrderedDict(
-                ad.split('=') for ad in additional_data
-            )
+            dict(ad.split('=') for ad in additional_data)
         ),
         num_results=num_results,
     )
