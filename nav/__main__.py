@@ -33,15 +33,23 @@ def _get_password(config_getter, password):
     )
 
 
+@argh.arg('endpoint-type', help='Web services endpoint type')
+@argh.arg('service-name', help='Web services endpoint')
+@argh.arg('-b', '--base-url', help='The base URL for the endpoint.')
+@argh.arg('-u', '--username', help='Web services username')
+@argh.arg('-p', '--password', help='Web services password')
+@argh.arg('-l', '--log-level', help='The log level to use')
+@argh.arg('-i', '--insecure', help="Skip certificate validation over HTTPS connections")
+@argh.arg('-c', '--config-section', help='The config section to get settings from.')
 def meta(
-    endpoint_type: 'Web services endpoint type',
-    service_name: 'Web services endpoint',
-    base_url: 'The base URL for the endpoint.' = None,
-    username: 'Web services username' = None,
-    password: 'Web services password' = None,
-    log_level: 'The log level to use' = None,
-    insecure: "Skip certificate validation over HTTPS connections" = False,
-    config_section: 'The config section to get settings from.' = 'nav',
+    endpoint_type,
+    service_name,
+    base_url=None,
+    username=None,
+    password=None,
+    log_level=None,
+    insecure=False,
+    config_section='nav'
 ):
     """Print the definition of a Codeunit or a Page"""
     _set_log_level(log_level)
@@ -59,17 +67,23 @@ def meta(
     return lxml.etree.tostring(data, pretty_print=True).decode()
 
 
-@argh.arg('-t', '--endpoint-type', type=str)
-@argh.arg('-e', '--endpoint', type=str)
+@argh.arg('-t', '--endpoint-type')
+@argh.arg('-e', '--endpoint')
+@argh.arg('-b', '--base-url', help='The base URL for the endpoint.')
+@argh.arg('-u', '--username', help='Web services username')
+@argh.arg('-p', '--password', help='Web services password')
+@argh.arg('-l', '--log-level', help='The log level to use')
+@argh.arg('-i', '--insecure', help="Skip certificate validation over HTTPS connections")
+@argh.arg('-c', '--config-section', help='The config section to get settings from.')
 def interact(
-    endpoint_type: 'Web services endpoint type' = None,
-    endpoint: 'Web services endpoint' = None,
-    base_url: 'The base URL for the endpoint.' = None,
-    username: 'Web services username' = None,
-    password: 'Web services password' = None,
-    log_level: 'The log level to use' = None,
-    insecure: "Skip certificate validation over HTTPS connections" = False,
-    config_section: 'The config section to get settings from.' = 'nav',
+    endpoint_type=None,
+    endpoint=None,
+    base_url=None,
+    username=None,
+    password=None,
+    log_level=None,
+    insecure=False,
+    config_section='nav'
 ):
     """Starts a REPL to enable live interaction with a WSDL endpoint"""
     _set_log_level(log_level)
@@ -85,7 +99,8 @@ Available vars:
 
 Example usage:
     service = create_service('Page', 'ItemList')
-    results = service.ReadMultiple(filter=dict(No='123'), setSize=0)
+    item_filter = dict(Field='No', Criteria='12345')
+    results = service.ReadMultiple(filter=item_filter, setSize=0)
 
     {additional_arg_example}
 """
@@ -105,11 +120,13 @@ Example usage:
     }
 
     if endpoint_type and endpoint:
-        banner1 = banner1_tmpl.format(
-            additional_arg='`{0}` - Service to run WS calls against'.format(endpoint.lower()),
-            additional_arg_example="{0}_results = {0}.ReadMultiple(filter=dict(Field='MyField', Criteria='My criteria'), setSize=0)".format(endpoint.lower())
-        )
-        user_ns[endpoint.lower()] = create_service(endpoint_type, endpoint)
+        endpoint_var = endpoint.lower()
+        tmpl_kw = {
+            'additional_arg': f'`{endpoint_var}` - Service for {endpoint_type} {endpoint}',
+            'additional_arg_example': f"{endpoint_var}_results = {endpoint_var}.ReadMultiple(filter=dict(Field='MyField', Criteria='My criteria'), setSize=0)" if endpoint_type == 'Page' else '',
+        }
+        banner1 = banner1_tmpl.format(**tmpl_kw)
+        user_ns[endpoint_var] = create_service(endpoint_type, endpoint)
     else:
         banner1 = banner1_tmpl.format(
             additional_arg='',
@@ -123,17 +140,25 @@ Example usage:
     )
 
 
-@argh.arg('-f', '--func-args', nargs='+', type=str)
+@argh.arg('service-name', help='Name of the code unit')
+@argh.arg('func', help='Name of the function to run')
+@argh.arg('-b', '--base-url', help='The base URL for the endpoint.')
+@argh.arg('-u', '--username', help='Web services username')
+@argh.arg('-p', '--password', help='Web services password')
+@argh.arg('-f', '--func-args', nargs='+', type=str, help='Add these kw args to the codeunit function call')
+@argh.arg('-i', '--insecure', help="Skip certificate validation over HTTPS connections")
+@argh.arg('-l', '--log-level', help='The log level to use')
+@argh.arg('-c', '--config-section', help='The config section to get settings from.')
 def codeunit(
-    service_name: 'Name of the code unit',
-    func: 'Name of the function to run',
-    base_url: 'The base URL for the endpoint.' = None,
-    username: 'Web services username' = None,
-    password: 'Web services password' = None,
-    func_args: 'Add these kw args to the codeunit function call' = (),
-    insecure: "Skip certificate validation over HTTPS connections" = False,
-    log_level: 'The log level to use' = None,
-    config_section: 'The config section to get settings from.' = 'nav',
+    service_name,
+    func,
+    base_url=None,
+    username=None,
+    password=None,
+    func_args=(),
+    insecure=False,
+    log_level=None,
+    config_section='nav'
 ):
     """Get a Codeunit's results"""
     _set_log_level(log_level)
@@ -154,23 +179,31 @@ def codeunit(
     return json.dumps(data, indent=2)
 
 
-@argh.arg('-f', '--filters', nargs='+', type=str)
-@argh.arg('-n', '--num-results')
-@argh.arg('-e', '--entries', nargs='+', type=str)
-@argh.arg('-a', '--additional_data', nargs='+', type=str)
+@argh.arg('service-name', help='Name of the WS page')
+@argh.arg('func', help='Name of the function to use')
+@argh.arg('-b', '--base-url', help='The base URL for the endpoint.')
+@argh.arg('-u', '--username', help='Web services username')
+@argh.arg('-p', '--password', help='Web services password')
+@argh.arg('-f', '--filters', nargs='+', type=str, help='Filters to apply to a ReadMultiple query')
+@argh.arg('-e', '--entries', nargs='+', type=str, help='Entries to create when function is CreateMultiple')
+@argh.arg('-a', '--additional-data', nargs='+', type=str, help='Additional data to pass alongside the main entries to create with CreateMultiple')
+@argh.arg('-n', '--num-results', help='Amount of results to return')
+@argh.arg('-l', '--log-level', help='The log level to use')
+@argh.arg('-i', '--insecure', help="Skip certificate validation over HTTPS connections")
+@argh.arg('-c', '--config-section', help='The config section to get settings from.')
 def page(
-    service_name: 'Name of the WS page',
-    func: 'Name of the function to use',
-    base_url: 'The base URL for the endpoint.' = None,
-    username: 'Web services username' = None,
-    password: 'Web services password' = None,
-    filters: 'Filters to apply to a ReadMultiple query' = (),
-    entries: 'Entries to create when function is CreateMultiple' = (),
-    additional_data: 'Additional data to pass alongside the main entries to create with CreateMultiple' = (),
-    num_results: 'Amount of results to return' = 0,
-    log_level: 'The log level to use' = None,
-    insecure: "Skip certificate validation over HTTPS connections" = False,
-    config_section: 'The config section to get settings from.' = 'nav',
+    service_name,
+    func,
+    base_url=None,
+    username=None,
+    password=None,
+    filters=(),
+    entries=(),
+    additional_data=(),
+    num_results=0,
+    log_level=None,
+    insecure=False,
+    config_section='nav'
 ):
     """Get a Page's results"""
     _set_log_level(log_level)
