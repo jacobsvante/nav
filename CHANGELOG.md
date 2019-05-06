@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.3.1 (2019-05-06)
+* Fix `interact` repl not being colorized in newer IPython versions
+
 ## 5.3.0 (2018-12-19)
 
 * Change: Add official support for Python 3.7

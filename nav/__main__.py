@@ -136,7 +136,11 @@ Example usage:
     IPython.embed(
         user_ns=user_ns,
         banner1=banner1,
-        config=traitlets.config.Config(colors='LightBG')
+        config=traitlets.config.Config(colors='LightBG'),
+        # To fix no colored input we pass in `using=False`
+        # See: https://github.com/ipython/ipython/issues/11523
+        # TODO: Remove once this is fixed upstream
+        using=False,
     )
 
 
