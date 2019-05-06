@@ -37,13 +37,27 @@ logger = logging.getLogger('nav')
 
 
 class NAV:
+    """Client to make requests to NAV web services
+
+    Args:
+        base_url:
+            The base URL for the NAV web service
+        username:
+            Username (usually includes AD domain)
+        password:
+            Password
+        cache_expiration:
+            How long WSDL files are cached in memory. Set to something falsy like False/0/None to disable this functionality. Defaults to 1 hour
+        verify_certificate:
+            Whether or not to verify certificate for HTTPS requests. Defaults to True
+    """
 
     def __init__(
         self,
-        base_url: 'The base URL for the NAV web service.',
-        username: 'Username (usually includes AD domain)',
-        password: 'Password',
-        cache_expiration: 'How long WSDL files are cached in memory. Set to something Falsy like False/0/None to disable this functionality.' = DEFAULT_WSDL_CACHE_EXPIRATION,
+        base_url,
+        username,
+        password,
+        cache_expiration=DEFAULT_WSDL_CACHE_EXPIRATION,
         verify_certificate=True,
     ):
         self.base_url = base_url
@@ -131,13 +145,18 @@ class NAV:
             **client_kwargs
         )
 
-    def make_service(
-        self,
-        endpoint_type: 'The endpoint type ("Page" or "Codeunit")',
-        service_name: 'Name of the page/codeunit',
-        **client_kwargs: 'Additional kwargs to pass to zeep.Client'
-    ):
-        """Create a WSDL service instance"""
+    def make_service(self, endpoint_type, service_name, **client_kwargs):
+        """Create a WSDL service instance
+
+        Args:
+            endpoint_type:
+                The endpoint type ("Page" or "Codeunit")
+            service_name:
+                Name of the page/codeunit
+            **client_kwargs:
+                Additional kwargs to pass to zeep.Client
+
+        """
         binding = self._make_binding(endpoint_type, service_name)
         service_cache_key = (binding, str(client_kwargs))
 
@@ -153,25 +172,34 @@ class NAV:
             self._service_cache[service_cache_key] = srvc
         return srvc
 
-    def meta(
-        self,
-        endpoint_type: 'The endpoint type ("Page" or "Codeunit")',
-        service_name: 'Name of the page/codeunit',
-    ):
-        """Get the definition of Codeunit or a Page"""
+    def meta(self, endpoint_type, service_name):
+        """Get the definition of Codeunit or a Page
+
+        Args:
+            endpoint_type:
+                The endpoint type ("Page" or "Codeunit")
+            service_name:
+                Name of the page/codeunit
+
+        """
         client = self._make_client(
             endpoint_type,
             service_name,
         )
         return client.wsdl._get_xml_document(client.wsdl.location)
 
-    def codeunit(
-        self,
-        service_name: 'The name of the code unit to use',
-        function: 'Name of the code unit function to run',
-        func_args: 'Add these kw args to the codeunit function call' = None,
-    ):
-        """Get a Codeunit's results"""
+    def codeunit(self, service_name, function, func_args=None):
+        """Get a Codeunit's results
+
+        Args:
+            service_name:
+                The name of the code unit to use
+            function:
+                Name of the code unit function to run
+            func_args:
+                Add these kw args to the codeunit function call
+
+        """
         srvc = self.make_service(
             endpoint_type=CODEUNIT,
             service_name=service_name,
@@ -183,14 +211,30 @@ class NAV:
 
     def page(
         self,
-        service_name: 'The name of the WS page',
-        function: 'The function to use. Currently supported functions are ReadMultiple and CreateMultiple.',
-        num_results: 'Maximum amount of results to return for ReadMultiple. Defaults to no limit.' = 0,
-        filters: 'Apply filters to a ReadMultiple result' = None,
-        entries: 'Entries to pass to CreateMultiple' = None,
-        additional_data: 'Any additional data to pass along to the WS call.' = None,
+        service_name,
+        function,
+        num_results=0,
+        filters=None,
+        entries=None,
+        additional_data=None
     ):
-        """Get a Page's results or create entries"""
+        """Get a Page's results or create entries
+
+        Args:
+            service_name:
+                The name of the WS Page
+            function:
+                The function to use. Currently supported functions are ReadMultiple and CreateMultiple
+            num_results:
+                Maximum amount of results to return for ReadMultiple. Defaults to no limit
+            filters:
+                Apply filters to a ReadMultiple result
+            entries:
+                Entries to pass to CreateMultiple
+            additional_data:
+                Any additional data to pass along to the WS call
+
+        """
         self.validate_supported_page_function(function)
 
         srvc = self.make_service(
@@ -234,11 +278,24 @@ class NAV:
 
     def read_multiple(
         self,
-        service_name: 'The name of the WS page',
-        num_results: 'Maximum amount of results to return. Defaults to no limit.' = 0,
-        filters: 'Apply filters to the query' = None,
-        additional_data: 'Any additional data to pass along to the WS call.' = None,
+        service_name,
+        num_results=0,
+        filters=None,
+        additional_data=None
     ):
+        """Get multiple results from a NAV page
+
+        Args:
+            service_name:
+                The name of the WS Page
+            num_results:
+                Maximum amount of results to return. Defaults to no limit
+            filters:
+                Apply filters to the query
+            additional_data:
+                Any additional data to pass along to the WS call
+
+        """
         return self.page(
             service_name=service_name,
             function=ReadMultiple,
@@ -249,10 +306,21 @@ class NAV:
 
     def create_multiple(
         self,
-        service_name: 'The name of the WS page',
-        entries: 'Entries to pass to CreateMultiple' = None,
-        additional_data: 'Any additional data to pass along to the WS call.' = None,
+        service_name,
+        entries=None,
+        additional_data=None
     ):
+        """Create multiple NAV Page entries
+
+        Args:
+            service_name
+                The name of the WS Page
+            entries
+                Entries to pass to CreateMultiple
+            additional_data
+                Any additional data to pass along to the WS call
+
+        """
         return self.page(
             service_name=service_name,
             function=CreateMultiple,
